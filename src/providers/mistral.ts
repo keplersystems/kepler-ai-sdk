@@ -13,7 +13,7 @@ import type {
   EmbeddingResponse,
 } from "../core/interfaces.js";
 import { LLMError } from "../errors/LLMError.js";
-import { MODEL_DATA } from "../models/model-data.js";
+import { litellmModelManager } from "../utils/litellm-models.js";
 
 /**
  * Provider adapter for Mistral AI's API
@@ -127,25 +127,31 @@ export class MistralProvider implements ProviderAdapter {
   }
 
   /**
-   * List all available Mistral models
+   * List all available Mistral models using LiteLLM data
    */
   async listModels(): Promise<ModelInfo[]> {
     try {
-      // Return models from our static data since Mistral API model listing is limited
-      return MODEL_DATA.filter((model) => model.provider === "mistral");
+      return await litellmModelManager.getModelsByProvider("mistral");
     } catch (error) {
       throw this.handleError(error, "model listing");
     }
   }
 
   /**
-   * Get information about a specific Mistral model
+   * Get information about a specific Mistral model using LiteLLM data
    */
   async getModel(modelId: string): Promise<ModelInfo | null> {
-    return (
-      MODEL_DATA.find((m) => m.id === modelId && m.provider === this.name) ||
-      null
-    );
+    try {
+      return await litellmModelManager.getModelInfo(modelId, "mistral");
+    } catch (error) {
+      throw new LLMError(
+        `Failed to get Mistral model '${modelId}' from LiteLLM: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        error instanceof Error ? error : undefined,
+        { provider: "mistral" }
+      );
+    }
   }
 
   /**

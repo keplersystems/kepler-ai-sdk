@@ -16,6 +16,7 @@ import type {
   ImageResponse,
 } from "../core/interfaces.js";
 import { LLMError } from "../errors/LLMError.js";
+import { litellmModelManager } from "../utils/litellm-models.js";
 
 /**
  * Provider adapter for OpenRouter's unified LLM API
@@ -175,20 +176,31 @@ export class OpenRouterProvider implements ProviderAdapter {
 
       return models;
     } catch (error) {
-      // If API fails, return cached models or fallback list
+      // If API fails, try LiteLLM data first
+      try {
+        console.warn("OpenRouter API failed, trying LiteLLM data:", error);
+        const litellmModels = await litellmModelManager.getAllModels();
+        if (litellmModels.length > 0) {
+          // Cache LiteLLM results
+          this.modelCache = litellmModels;
+          this.modelCacheExpiry = now + this.CACHE_TTL;
+          return litellmModels;
+        }
+      } catch (litellmError) {
+        console.warn("LiteLLM also failed:", litellmError);
+      }
+
+      // If both fail, return cached models or hardcoded fallback
       if (this.modelCache) {
-        console.warn(
-          "OpenRouter models API failed, using cached models:",
-          error
-        );
+        console.warn("Using cached OpenRouter models");
         return this.modelCache;
       }
 
-      console.warn(
-        "OpenRouter models API failed, using fallback models:",
-        error
+      throw new LLMError(
+        `Failed to fetch OpenRouter models: OpenRouter API and LiteLLM both unavailable`,
+        error instanceof Error ? error : undefined,
+        { provider: "openrouter" }
       );
-      return this.getFallbackModels();
     }
   }
 

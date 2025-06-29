@@ -13,7 +13,7 @@ import type {
   EmbeddingResponse,
 } from "../core/interfaces.js";
 import { LLMError } from "../errors/LLMError.js";
-import { MODEL_DATA } from "../models/model-data.js";
+import { litellmModelManager } from "../utils/litellm-models.js";
 
 /**
  * Provider adapter for Cohere's API
@@ -121,20 +121,37 @@ export class CohereProvider implements ProviderAdapter {
   }
 
   /**
-   * List all available Cohere models
+   * List all available Cohere models using LiteLLM data
    */
   async listModels(): Promise<ModelInfo[]> {
-    return MODEL_DATA.filter((model) => model.provider === this.name);
+    try {
+      return await litellmModelManager.getModelsByProvider("cohere");
+    } catch (error) {
+      throw new LLMError(
+        `Failed to fetch Cohere models from LiteLLM: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        error instanceof Error ? error : undefined,
+        { provider: "cohere" }
+      );
+    }
   }
 
   /**
-   * Get information about a specific Cohere model
+   * Get information about a specific Cohere model using LiteLLM data
    */
   async getModel(modelId: string): Promise<ModelInfo | null> {
-    return (
-      MODEL_DATA.find((m) => m.id === modelId && m.provider === this.name) ||
-      null
-    );
+    try {
+      return await litellmModelManager.getModelInfo(modelId, "cohere");
+    } catch (error) {
+      throw new LLMError(
+        `Failed to get Cohere model '${modelId}' from LiteLLM: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        error instanceof Error ? error : undefined,
+        { provider: "cohere" }
+      );
+    }
   }
 
   /**

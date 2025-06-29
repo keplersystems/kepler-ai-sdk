@@ -36,6 +36,7 @@ export { OpenRouterProvider } from "./providers/openrouter.js";
 
 // Model management
 export { ModelManager } from "./models/ModelManager.js";
+export { litellmModelManager } from "./utils/litellm-models.js";
 
 // Pricing and usage tracking
 export { PricingCalculator } from "./pricing/PricingCalculator.js";
