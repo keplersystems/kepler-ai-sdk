@@ -1,243 +1,331 @@
-import type { ModelInfo } from '../core/interfaces.js';
+import type { ModelInfo } from "../core/interfaces.js";
 
 export const MODEL_DATA: ModelInfo[] = [
-    // OpenAI Models
-    {
-        id: 'gpt-4o',
-        provider: 'openai',
-        name: 'GPT-4o',
-        contextWindow: 128000,
-        capabilities: {
-            streaming: true,
-            functionCalling: true,
-            vision: true,
-            audio: false,
-            embeddings: false,
-            reasoning: false,
-            video: false,
-            documents: true
-        },
-        pricing: { inputTokens: 2.50, outputTokens: 10.00 }
+  // OpenAI Models
+  {
+    id: "gpt-4o",
+    provider: "openai",
+    name: "GPT-4o",
+    contextWindow: 128000,
+    capabilities: {
+      streaming: true,
+      functionCalling: true,
+      vision: true,
+      audio: false,
+      embeddings: false,
+      reasoning: false,
+      video: false,
+      documents: true,
     },
-    {
-        id: 'gpt-4o-mini',
-        provider: 'openai',
-        name: 'GPT-4o Mini',
-        contextWindow: 128000,
-        capabilities: {
-            streaming: true,
-            functionCalling: true,
-            vision: true,
-            audio: false,
-            embeddings: false,
-            reasoning: false,
-            video: false,
-            documents: true
-        },
-        pricing: { inputTokens: 0.15, outputTokens: 0.60 }
+    pricing: { inputTokens: 2.5, outputTokens: 10.0 },
+  },
+  {
+    id: "gpt-4o-mini",
+    provider: "openai",
+    name: "GPT-4o Mini",
+    contextWindow: 128000,
+    capabilities: {
+      streaming: true,
+      functionCalling: true,
+      vision: true,
+      audio: false,
+      embeddings: false,
+      reasoning: false,
+      video: false,
+      documents: true,
     },
-    {
-        id: 'gpt-4-turbo',
-        provider: 'openai',
-        name: 'GPT-4 Turbo',
-        contextWindow: 128000,
-        capabilities: {
-            streaming: true,
-            functionCalling: true,
-            vision: true,
-            audio: false,
-            embeddings: false,
-            reasoning: false,
-            video: false,
-            documents: true
-        },
-        pricing: { inputTokens: 10.00, outputTokens: 30.00 }
+    pricing: { inputTokens: 0.15, outputTokens: 0.6 },
+  },
+  {
+    id: "gpt-4-turbo",
+    provider: "openai",
+    name: "GPT-4 Turbo",
+    contextWindow: 128000,
+    capabilities: {
+      streaming: true,
+      functionCalling: true,
+      vision: true,
+      audio: false,
+      embeddings: false,
+      reasoning: false,
+      video: false,
+      documents: true,
     },
-    {
-        id: 'gpt-4',
-        provider: 'openai',
-        name: 'GPT-4',
-        contextWindow: 8192,
-        capabilities: {
-            streaming: true,
-            functionCalling: true,
-            vision: false,
-            audio: false,
-            embeddings: false,
-            reasoning: false,
-            video: false,
-            documents: false
-        },
-        pricing: { inputTokens: 30.00, outputTokens: 60.00 }
+    pricing: { inputTokens: 10.0, outputTokens: 30.0 },
+  },
+  {
+    id: "gpt-4",
+    provider: "openai",
+    name: "GPT-4",
+    contextWindow: 8192,
+    capabilities: {
+      streaming: true,
+      functionCalling: true,
+      vision: false,
+      audio: false,
+      embeddings: false,
+      reasoning: false,
+      video: false,
+      documents: false,
     },
-    {
-        id: 'gpt-3.5-turbo',
-        provider: 'openai',
-        name: 'GPT-3.5 Turbo',
-        contextWindow: 16385,
-        capabilities: {
-            streaming: true,
-            functionCalling: true,
-            vision: false,
-            audio: false,
-            embeddings: false,
-            reasoning: false,
-            video: false,
-            documents: false
-        },
-        pricing: { inputTokens: 0.50, outputTokens: 1.50 }
+    pricing: { inputTokens: 30.0, outputTokens: 60.0 },
+  },
+  {
+    id: "gpt-3.5-turbo",
+    provider: "openai",
+    name: "GPT-3.5 Turbo",
+    contextWindow: 16385,
+    capabilities: {
+      streaming: true,
+      functionCalling: true,
+      vision: false,
+      audio: false,
+      embeddings: false,
+      reasoning: false,
+      video: false,
+      documents: false,
     },
-    {
-        id: 'o1-preview',
-        provider: 'openai',
-        name: 'o1-preview',
-        contextWindow: 200000,
-        capabilities: {
-            streaming: true,
-            functionCalling: false,
-            vision: false,
-            audio: false,
-            embeddings: false,
-            reasoning: true,
-            video: false,
-            documents: false
-        },
-        pricing: { inputTokens: 15.00, outputTokens: 60.00 }
+    pricing: { inputTokens: 0.5, outputTokens: 1.5 },
+  },
+  {
+    id: "o1-preview",
+    provider: "openai",
+    name: "o1-preview",
+    contextWindow: 200000,
+    capabilities: {
+      streaming: true,
+      functionCalling: false,
+      vision: false,
+      audio: false,
+      embeddings: false,
+      reasoning: true,
+      video: false,
+      documents: false,
     },
-    {
-        id: 'o1-mini',
-        provider: 'openai',
-        name: 'o1-mini',
-        contextWindow: 200000,
-        capabilities: {
-            streaming: true,
-            functionCalling: false,
-            vision: false,
-            audio: false,
-            embeddings: false,
-            reasoning: true,
-            video: false,
-            documents: false
-        },
-        pricing: { inputTokens: 3.00, outputTokens: 12.00 }
+    pricing: { inputTokens: 15.0, outputTokens: 60.0 },
+  },
+  {
+    id: "o1-mini",
+    provider: "openai",
+    name: "o1-mini",
+    contextWindow: 200000,
+    capabilities: {
+      streaming: true,
+      functionCalling: false,
+      vision: false,
+      audio: false,
+      embeddings: false,
+      reasoning: true,
+      video: false,
+      documents: false,
     },
+    pricing: { inputTokens: 3.0, outputTokens: 12.0 },
+  },
 
-    // Anthropic Models
-    {
-        id: 'claude-3-5-sonnet-20240620',
-        provider: 'anthropic',
-        name: 'Claude 3.5 Sonnet',
-        contextWindow: 200000,
-        capabilities: {
-            streaming: true,
-            functionCalling: true,
-            vision: true,
-            audio: false,
-            embeddings: false,
-            reasoning: false,
-            documents: true
-        },
-        pricing: { inputTokens: 3.00, outputTokens: 15.00 }
+  // Anthropic Models
+  {
+    id: "claude-3-5-sonnet-20240620",
+    provider: "anthropic",
+    name: "Claude 3.5 Sonnet",
+    contextWindow: 200000,
+    capabilities: {
+      streaming: true,
+      functionCalling: true,
+      vision: true,
+      audio: false,
+      embeddings: false,
+      reasoning: false,
+      documents: true,
     },
-    {
-        id: 'claude-3-opus-20240229',
-        provider: 'anthropic',
-        name: 'Claude 3 Opus',
-        contextWindow: 200000,
-        capabilities: {
-            streaming: true,
-            functionCalling: true,
-            vision: true,
-            audio: false,
-            embeddings: false,
-            reasoning: false,
-            documents: true
-        },
-        pricing: { inputTokens: 15.00, outputTokens: 75.00 }
+    pricing: { inputTokens: 3.0, outputTokens: 15.0 },
+  },
+  {
+    id: "claude-3-opus-20240229",
+    provider: "anthropic",
+    name: "Claude 3 Opus",
+    contextWindow: 200000,
+    capabilities: {
+      streaming: true,
+      functionCalling: true,
+      vision: true,
+      audio: false,
+      embeddings: false,
+      reasoning: false,
+      documents: true,
     },
-    {
-        id: 'claude-3-sonnet-20240229',
-        provider: 'anthropic',
-        name: 'Claude 3 Sonnet',
-        contextWindow: 200000,
-        capabilities: {
-            streaming: true,
-            functionCalling: true,
-            vision: true,
-            audio: false,
-            embeddings: false,
-            reasoning: false,
-            documents: true
-        },
-        pricing: { inputTokens: 3.00, outputTokens: 15.00 }
+    pricing: { inputTokens: 15.0, outputTokens: 75.0 },
+  },
+  {
+    id: "claude-3-sonnet-20240229",
+    provider: "anthropic",
+    name: "Claude 3 Sonnet",
+    contextWindow: 200000,
+    capabilities: {
+      streaming: true,
+      functionCalling: true,
+      vision: true,
+      audio: false,
+      embeddings: false,
+      reasoning: false,
+      documents: true,
     },
-    {
-        id: 'claude-3-haiku-20240307',
-        provider: 'anthropic',
-        name: 'Claude 3 Haiku',
-        contextWindow: 200000,
-        capabilities: {
-            streaming: true,
-            functionCalling: true,
-            vision: true,
-            audio: false,
-            embeddings: false,
-            reasoning: false,
-            documents: true
-        },
-        pricing: { inputTokens: 0.25, outputTokens: 1.25 }
+    pricing: { inputTokens: 3.0, outputTokens: 15.0 },
+  },
+  {
+    id: "claude-3-haiku-20240307",
+    provider: "anthropic",
+    name: "Claude 3 Haiku",
+    contextWindow: 200000,
+    capabilities: {
+      streaming: true,
+      functionCalling: true,
+      vision: true,
+      audio: false,
+      embeddings: false,
+      reasoning: false,
+      documents: true,
     },
+    pricing: { inputTokens: 0.25, outputTokens: 1.25 },
+  },
 
-    // Google Gemini Models
-    {
-        id: 'gemini-2.0-flash-exp',
-        provider: 'gemini',
-        name: 'Gemini 2.0 Flash (Experimental)',
-        contextWindow: 1048576, // 1M tokens
-        capabilities: {
-            streaming: true,
-            functionCalling: true,
-            vision: true,
-            audio: true,
-            embeddings: false,
-            reasoning: true,
-            video: true,
-            documents: true
-        },
-        pricing: { inputTokens: 0.075, outputTokens: 0.30 }
+  // Google Gemini Models
+  {
+    id: "gemini-2.0-flash-exp",
+    provider: "gemini",
+    name: "Gemini 2.0 Flash (Experimental)",
+    contextWindow: 1048576, // 1M tokens
+    capabilities: {
+      streaming: true,
+      functionCalling: true,
+      vision: true,
+      audio: true,
+      embeddings: false,
+      reasoning: true,
+      video: true,
+      documents: true,
     },
-    {
-        id: 'gemini-1.5-pro',
-        provider: 'gemini',
-        name: 'Gemini 1.5 Pro',
-        contextWindow: 2097152, // 2M tokens
-        capabilities: {
-            streaming: true,
-            functionCalling: true,
-            vision: true,
-            audio: true,
-            embeddings: false,
-            reasoning: false,
-            video: true,
-            documents: true
-        },
-        pricing: { inputTokens: 1.25, outputTokens: 5.00 }
+    pricing: { inputTokens: 0.075, outputTokens: 0.3 },
+  },
+  {
+    id: "gemini-1.5-pro",
+    provider: "gemini",
+    name: "Gemini 1.5 Pro",
+    contextWindow: 2097152, // 2M tokens
+    capabilities: {
+      streaming: true,
+      functionCalling: true,
+      vision: true,
+      audio: true,
+      embeddings: false,
+      reasoning: false,
+      video: true,
+      documents: true,
     },
-    {
-        id: 'gemini-1.5-flash',
-        provider: 'gemini',
-        name: 'Gemini 1.5 Flash',
-        contextWindow: 1048576, // 1M tokens
-        capabilities: {
-            streaming: true,
-            functionCalling: true,
-            vision: true,
-            audio: true,
-            embeddings: false,
-            reasoning: false,
-            video: true,
-            documents: true
-        },
-        pricing: { inputTokens: 0.075, outputTokens: 0.30 }
-    }
+    pricing: { inputTokens: 1.25, outputTokens: 5.0 },
+  },
+  {
+    id: "gemini-1.5-flash",
+    provider: "gemini",
+    name: "Gemini 1.5 Flash",
+    contextWindow: 1048576, // 1M tokens
+    capabilities: {
+      streaming: true,
+      functionCalling: true,
+      vision: true,
+      audio: true,
+      embeddings: false,
+      reasoning: false,
+      video: true,
+      documents: true,
+    },
+    pricing: { inputTokens: 0.075, outputTokens: 0.3 },
+  },
+
+  // Cohere Models
+  {
+    id: "command-r-plus",
+    provider: "cohere",
+    name: "Command R+",
+    contextWindow: 128000,
+    capabilities: {
+      streaming: true,
+      functionCalling: true,
+      vision: false,
+      audio: false,
+      embeddings: false,
+      reasoning: false,
+      video: false,
+      documents: true,
+    },
+    pricing: { inputTokens: 3.0, outputTokens: 15.0 },
+  },
+  {
+    id: "command-r",
+    provider: "cohere",
+    name: "Command R",
+    contextWindow: 128000,
+    capabilities: {
+      streaming: true,
+      functionCalling: true,
+      vision: false,
+      audio: false,
+      embeddings: false,
+      reasoning: false,
+      video: false,
+      documents: true,
+    },
+    pricing: { inputTokens: 0.5, outputTokens: 1.5 },
+  },
+  {
+    id: "command-light",
+    provider: "cohere",
+    name: "Command Light",
+    contextWindow: 4096,
+    capabilities: {
+      streaming: true,
+      functionCalling: false,
+      vision: false,
+      audio: false,
+      embeddings: false,
+      reasoning: false,
+      video: false,
+      documents: false,
+    },
+    pricing: { inputTokens: 0.3, outputTokens: 0.6 },
+  },
+  // Cohere Embedding Models
+  {
+    id: "embed-english-v3.0",
+    provider: "cohere",
+    name: "Embed English v3.0",
+    contextWindow: 512,
+    capabilities: {
+      streaming: false,
+      functionCalling: false,
+      vision: false,
+      audio: false,
+      embeddings: true,
+      reasoning: false,
+      video: false,
+      documents: false,
+    },
+    pricing: { inputTokens: 0.1, outputTokens: 0.0 },
+  },
+  {
+    id: "embed-multilingual-v3.0",
+    provider: "cohere",
+    name: "Embed Multilingual v3.0",
+    contextWindow: 512,
+    capabilities: {
+      streaming: false,
+      functionCalling: false,
+      vision: false,
+      audio: false,
+      embeddings: true,
+      reasoning: false,
+      video: false,
+      documents: false,
+    },
+    pricing: { inputTokens: 0.1, outputTokens: 0.0 },
+  },
 ];
