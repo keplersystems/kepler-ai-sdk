@@ -118,7 +118,7 @@ export interface CompletionResponse {
     usage: TokenUsage;
 
     /** Reason why generation stopped */
-    finishReason: 'stop' | 'length' | 'tool_calls' | 'content_filter';
+    finishReason: 'stop' | 'length' | 'tool_calls' | 'content_filter' | 'rate_limit' | 'cancelled';
 
     /** Tool calls made by the model (if any) */
     toolCalls?: ToolCall[];

@@ -30,8 +30,6 @@ export { LLMError } from './errors/LLMError.js';
 export { OpenAIProvider } from './providers/openai.js';
 export { AnthropicProvider } from './providers/anthropic.js';
 export { GeminiProvider } from './providers/gemini.js';
-export { MistralProvider } from './providers/mistral.js';
-export { CohereProvider } from './providers/cohere.js';
 export { OpenRouterProvider } from './providers/openrouter.js';
 
 // Model management

@@ -2,8 +2,6 @@ import {
     OpenAIProvider,
     AnthropicProvider,
     GeminiProvider,
-    MistralProvider,
-    CohereProvider,
     OpenRouterProvider,
     ModelManager,
     PricingCalculator,
@@ -27,14 +25,6 @@ async function basicExample() {
         apiKey: process.env.GEMINI_API_KEY || 'your-gemini-api-key'
     });
 
-    const mistral = new MistralProvider({
-        apiKey: process.env.MISTRAL_API_KEY || 'your-mistral-api-key'
-    });
-
-    const cohere = new CohereProvider({
-        apiKey: process.env.COHERE_API_KEY || 'your-cohere-api-key'
-    });
-
     const openrouter = new OpenRouterProvider({
         apiKey: process.env.OPENROUTER_API_KEY || 'your-openrouter-api-key',
         siteUrl: 'https://your-site.com',
@@ -46,8 +36,6 @@ async function basicExample() {
     modelManager.addProvider(openai);
     modelManager.addProvider(anthropic);
     modelManager.addProvider(gemini);
-    modelManager.addProvider(mistral);
-    modelManager.addProvider(cohere);
     modelManager.addProvider(openrouter);
 
     // 3. Set up pricing and usage tracking

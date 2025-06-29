@@ -1,7 +1,5 @@
 import {
     GeminiProvider,
-    MistralProvider,
-    CohereProvider,
     OpenRouterProvider,
     ModelManager,
     PricingCalculator,
@@ -17,14 +15,6 @@ async function newProvidersExample() {
         apiKey: process.env.GEMINI_API_KEY || 'your-gemini-api-key'
     });
 
-    const mistral = new MistralProvider({
-        apiKey: process.env.MISTRAL_API_KEY || 'your-mistral-api-key'
-    });
-
-    const cohere = new CohereProvider({
-        apiKey: process.env.COHERE_API_KEY || 'your-cohere-api-key'
-    });
-
     const openrouter = new OpenRouterProvider({
         apiKey: process.env.OPENROUTER_API_KEY || 'your-openrouter-api-key',
         siteUrl: 'https://your-site.com',
@@ -34,8 +24,6 @@ async function newProvidersExample() {
     // 2. Set up model manager with all providers
     const modelManager = new ModelManager();
     modelManager.addProvider(gemini);
-    modelManager.addProvider(mistral);
-    modelManager.addProvider(cohere);
     modelManager.addProvider(openrouter);
 
     const pricingCalculator = new PricingCalculator();
@@ -48,7 +36,7 @@ async function newProvidersExample() {
         console.log(`Found ${allModels.length} models across all providers`);
 
         // Show models by provider
-        const providers = ['gemini', 'mistral', 'cohere', 'openrouter'];
+        const providers = ['gemini', 'openrouter'];
         for (const provider of providers) {
             const providerModels = allModels.filter(m => m.provider === provider);
             console.log(`  ${provider}: ${providerModels.length} models`);
@@ -99,44 +87,6 @@ async function newProvidersExample() {
             }
         }
 
-        // Test Mistral (Pixtral for vision)
-        if (process.env.MISTRAL_API_KEY) {
-            try {
-                console.log('\n🎨 Mistral Large:');
-                const mistralResponse = await mistral.generateCompletion({
-                    model: 'mistral-large-latest',
-                    messages: [
-                        { role: 'user', content: 'What are the advantages of edge computing?' }
-                    ],
-                    temperature: 0.5,
-                    maxTokens: 100
-                });
-                console.log(`Response: ${mistralResponse.content.substring(0, 150)}...`);
-                console.log(`Tokens: ${mistralResponse.usage.totalTokens}`);
-            } catch (error) {
-                console.log('Mistral test skipped (likely missing API key)');
-            }
-        }
-
-        // Test Cohere (Command R+)
-        if (process.env.COHERE_API_KEY) {
-            try {
-                console.log('\n💼 Cohere Command R+:');
-                const cohereResponse = await cohere.generateCompletion({
-                    model: 'command-r-plus',
-                    messages: [
-                        { role: 'user', content: 'Describe the benefits of distributed systems.' }
-                    ],
-                    temperature: 0.6,
-                    maxTokens: 100
-                });
-                console.log(`Response: ${cohereResponse.content.substring(0, 150)}...`);
-                console.log(`Tokens: ${cohereResponse.usage.totalTokens}`);
-            } catch (error) {
-                console.log('Cohere test skipped (likely missing API key)');
-            }
-        }
-
         // 7. Show usage statistics
         console.log('\n📊 Usage Statistics:');
         const aggregatedStats = usageTracker.getAggregatedUsage();
@@ -181,9 +131,9 @@ async function geminiVideoExample() {
                 {
                     role: 'user' as const,
                     content: [
-                        { 
-                            type: 'text' as const, 
-                            text: 'Analyze this video and describe what you see. Focus on the main actions and objects.' 
+                        {
+                            type: 'text' as const,
+                            text: 'Analyze this video and describe what you see. Focus on the main actions and objects.'
                         },
                         // In a real scenario, you would encode your video file to base64
                         // { 
@@ -207,52 +157,6 @@ async function geminiVideoExample() {
 
     } catch (error) {
         console.error('❌ Video processing error:', error);
-    }
-}
-
-// Example: Document OCR with Pixtral
-async function pixtralOCRExample() {
-    console.log('\n\n📄 Pixtral Document OCR Example\n');
-
-    const mistral = new MistralProvider({
-        apiKey: process.env.MISTRAL_API_KEY || 'your-mistral-api-key'
-    });
-
-    try {
-        // Note: This is a demonstration - you would need actual document image data
-        const ocrRequest = {
-            model: 'pixtral-12b-2409',
-            messages: [
-                {
-                    role: 'user' as const,
-                    content: [
-                        { 
-                            type: 'text' as const, 
-                            text: 'Extract all text from this document and format it nicely. Also identify the document type.' 
-                        },
-                        // In a real scenario, you would provide a document image
-                        // { 
-                        //     type: 'document' as const, 
-                        //     documentUrl: 'data:image/png;base64,<your-base64-document-image>',
-                        //     mimeType: 'image/png'
-                        // }
-                    ]
-                }
-            ],
-            maxTokens: 1000
-        };
-
-        console.log('📋 This example shows the structure for document OCR with Pixtral.');
-        console.log('To use this with real documents, take a photo/scan of your document,');
-        console.log('encode it to base64, and add it to the content array.');
-        console.log('Pixtral excels at extracting text from complex document layouts.');
-
-        // Uncomment the following to test with actual document data:
-        // const response = await mistral.generateCompletion(ocrRequest);
-        // console.log('Extracted text:', response.content);
-
-    } catch (error) {
-        console.error('❌ OCR processing error:', error);
     }
 }
 
@@ -318,11 +222,10 @@ async function openRouterExplorationExample() {
 async function runExamples() {
     await newProvidersExample();
     await geminiVideoExample();
-    await pixtralOCRExample();
     await openRouterExplorationExample();
 }
 
 // Only run if this file is executed directly
 if (import.meta.main) {
     runExamples().catch(console.error);
-}
+} 
