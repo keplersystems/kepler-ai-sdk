@@ -1,6 +1,5 @@
 import {
     GeminiProvider,
-    OpenRouterProvider,
     ModelManager,
     PricingCalculator,
     UsageTracker
@@ -15,16 +14,9 @@ async function newProvidersExample() {
         apiKey: process.env.GEMINI_API_KEY || 'your-gemini-api-key'
     });
 
-    const openrouter = new OpenRouterProvider({
-        apiKey: process.env.OPENROUTER_API_KEY || 'your-openrouter-api-key',
-        siteUrl: 'https://your-site.com',
-        appName: 'Kepler AI SDK Demo'
-    });
-
     // 2. Set up model manager with all providers
     const modelManager = new ModelManager();
     modelManager.addProvider(gemini);
-    modelManager.addProvider(openrouter);
 
     const pricingCalculator = new PricingCalculator();
     const usageTracker = new UsageTracker();
@@ -36,7 +28,7 @@ async function newProvidersExample() {
         console.log(`Found ${allModels.length} models across all providers`);
 
         // Show models by provider
-        const providers = ['gemini', 'openrouter'];
+        const providers = ['gemini'];
         for (const provider of providers) {
             const providerModels = allModels.filter(m => m.provider === provider);
             console.log(`  ${provider}: ${providerModels.length} models`);
@@ -160,69 +152,10 @@ async function geminiVideoExample() {
     }
 }
 
-// Example: OpenRouter model exploration
-async function openRouterExplorationExample() {
-    console.log('\n\n🌐 OpenRouter Model Exploration Example\n');
-
-    const openrouter = new OpenRouterProvider({
-        apiKey: process.env.OPENROUTER_API_KEY || 'your-openrouter-api-key',
-        siteUrl: 'https://your-site.com',
-        appName: 'Kepler AI SDK Demo'
-    });
-
-    try {
-        console.log('🔍 Discovering available models on OpenRouter...');
-        const models = await openrouter.listModels();
-        console.log(`Found ${models.length} models available through OpenRouter`);
-
-        // Group models by provider
-        const modelsByProvider = models.reduce((acc, model) => {
-            const provider = model.metadata?.top_provider || 'unknown';
-            if (!acc[provider]) acc[provider] = [];
-            acc[provider].push(model);
-            return acc;
-        }, {} as Record<string, any[]>);
-
-        console.log('\n📊 Models by underlying provider:');
-        Object.entries(modelsByProvider).slice(0, 5).forEach(([provider, providerModels]) => {
-            console.log(`  ${provider}: ${providerModels.length} models`);
-            if (providerModels.length > 0) {
-                const example = providerModels[0];
-                console.log(`    Example: ${example.id} (${example.contextWindow} tokens)`);
-            }
-        });
-
-        // Find models with specific capabilities
-        const functionModels = models.filter(m => m.capabilities.functionCalling);
-        const visionModels = models.filter(m => m.capabilities.vision);
-        const reasoningModels = models.filter(m => m.capabilities.reasoning);
-
-        console.log('\n🔧 Models by capability:');
-        console.log(`  Function calling: ${functionModels.length} models`);
-        console.log(`  Vision: ${visionModels.length} models`);
-        console.log(`  Reasoning: ${reasoningModels.length} models`);
-
-        // Show some high-context models
-        const highContextModels = models
-            .filter(m => m.contextWindow >= 100000)
-            .sort((a, b) => b.contextWindow - a.contextWindow)
-            .slice(0, 5);
-
-        console.log('\n🧠 Top 5 highest context models:');
-        highContextModels.forEach(model => {
-            console.log(`  • ${model.id}: ${(model.contextWindow / 1000).toFixed(0)}K tokens`);
-        });
-
-    } catch (error) {
-        console.error('❌ OpenRouter exploration error:', error);
-    }
-}
-
 // Run examples
 async function runExamples() {
     await newProvidersExample();
     await geminiVideoExample();
-    await openRouterExplorationExample();
 }
 
 // Only run if this file is executed directly
