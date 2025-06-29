@@ -32,6 +32,7 @@ export { AnthropicProvider } from "./providers/anthropic.js";
 export { GeminiProvider } from "./providers/gemini.js";
 export { CohereProvider } from "./providers/cohere.js";
 export { MistralProvider } from "./providers/mistral.js";
+export { OpenRouterProvider } from "./providers/openrouter.js";
 
 // Model management
 export { ModelManager } from "./models/ModelManager.js";
