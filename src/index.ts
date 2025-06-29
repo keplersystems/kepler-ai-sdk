@@ -31,6 +31,7 @@ export { OpenAIProvider } from "./providers/openai.js";
 export { AnthropicProvider } from "./providers/anthropic.js";
 export { GeminiProvider } from "./providers/gemini.js";
 export { CohereProvider } from "./providers/cohere.js";
+export { MistralProvider } from "./providers/mistral.js";
 
 // Model management
 export { ModelManager } from "./models/ModelManager.js";
