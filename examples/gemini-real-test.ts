@@ -148,7 +148,7 @@ async function testRealGeminiAPI() {
     console.log("Making real API call with image input...\n");
 
     const multimodalResponse = await provider.generateCompletion({
-      model: "gemini-2.5-pro",
+      model: "gemini-2.0-flash-001",
       messages: [
         {
           role: "user",
