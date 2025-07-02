@@ -30,18 +30,18 @@ async function testRealGeminiAPI() {
     console.log("1️⃣ Testing Basic Text Completion:");
     console.log("Making real API call to Gemini...\n");
 
-    // const response = await provider.generateCompletion({
-    //   model: "gemini-2.5-flash",
-    //   messages: [
-    //     {
-    //       role: "user",
-    //       content:
-    //         "Hello! Can you tell me about Gemini's capabilities in exactly 3 sentences?",
-    //     },
-    //   ],
-    //   temperature: 0.7,
-    //   maxTokens: 100,
-    // });
+    const response = await provider.generateCompletion({
+      model: "gemini-2.5-flash",
+      messages: [
+        {
+          role: "user",
+          content:
+            "Hello! Can you tell me about Gemini's capabilities in exactly 3 sentences?",
+        },
+      ],
+      temperature: 0.7,
+      maxTokens: 100,
+    });
 
     console.log("✅ SUCCESS! Real API Response:");
     console.log(`📝 Content: "${response.content}"`);
@@ -61,12 +61,12 @@ async function testRealGeminiAPI() {
     console.log("2️⃣ Testing Image Generation:");
     console.log("Making real API call to Imagen...\n");
 
-    // const imageResponse = await provider.generateImage({
-    //   prompt: "A cute robot holding a flower, minimal illustration style",
-    //   model: "models/imagen-4.0-generate-preview-06-06",
-    //   size: "1024x1024",
-    //   n: 1,
-    // });
+    const imageResponse = await provider.generateImage({
+      prompt: "A cute robot holding a flower, minimal illustration style",
+      model: "models/imagen-4.0-generate-preview-06-06",
+      size: "1024x1024",
+      n: 1,
+    });
 
     console.log("✅ SUCCESS! Real Image Generation:");
     console.log(`🖼️  Generated ${imageResponse.images.length} image(s)`);
@@ -87,11 +87,11 @@ async function testRealGeminiAPI() {
     console.log("3️⃣ Testing Audio Generation:");
     console.log("Making real API call to Gemini TTS...\n");
 
-    // const audioResponse = await provider.generateAudio({
-    //   text: "Hello from Gemini! This is a test of text-to-speech capabilities.",
-    //   model: "gemini-2.5-flash-preview-tts",
-    //   voice: "alloy",
-    // });
+    const audioResponse = await provider.generateAudio({
+      text: "Hello from Gemini! This is a test of text-to-speech capabilities.",
+      model: "gemini-2.5-flash-preview-tts",
+      voice: "alloy",
+    });
 
     console.log("✅ SUCCESS! Real Audio Generation:");
     console.log(
@@ -101,6 +101,13 @@ async function testRealGeminiAPI() {
       `🔊 Audio type: ${audioResponse.contentType || "WAV (default)"}`
     );
     console.log(`🎙️  Voice used: alloy → Zephyr (Gemini voice)\n`);
+
+    // save audio to file
+    const fs = await import("fs");
+    const audioFilePath = `./gemini-audio-test.wav`;
+    fs.writeFileSync(audioFilePath, audioResponse.audio);
+    console.log(`📂 Audio saved to: ${audioFilePath}`);
+
   } catch (error: any) {
     console.log("❌ Expected error with invalid key:");
     console.log(`   Error: ${error.message}`);
@@ -111,13 +118,13 @@ async function testRealGeminiAPI() {
     console.log("4️⃣ Testing Embeddings:");
     console.log("Making real API call to Gemini embeddings...\n");
 
-    // const embeddingResponse = await provider.generateEmbedding({
-    //   input: [
-    //     "Gemini is Google's most capable AI model",
-    //     "It excels at multimodal understanding",
-    //   ],
-    //   model: "gemini-embedding-exp-03-07",
-    // });
+    const embeddingResponse = await provider.generateEmbedding({
+      input: [
+        "Gemini is Google's most capable AI model",
+        "It excels at multimodal understanding",
+      ],
+      model: "gemini-embedding-exp-03-07",
+    });
 
     console.log("✅ SUCCESS! Real Embedding Generation:");
     console.log(
