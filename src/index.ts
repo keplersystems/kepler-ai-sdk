@@ -21,33 +21,45 @@ export type {
   AudioRequest,
   AudioResponse,
   ProviderAdapter,
-} from "./core/interfaces.js";
+} from "./core/interfaces";
+
+// Essential OAuth interfaces (apps implement TokenStorage themselves)
+export type {
+  OAuthToken,
+  OAuthConfig,
+  TokenStorage,
+  OAuthErrorType,
+} from "./core/oauth";
+
+// OAuth implementation
+export { OAuth } from "./auth/oauth";
 
 // Error handling
-export { LLMError } from "./errors/LLMError.js";
+export { LLMError } from "./errors/LLMError";
 
 // Provider adapters
-export { OpenAIProvider } from "./providers/openai.js";
-export { AnthropicProvider } from "./providers/anthropic.js";
-export { GeminiProvider } from "./providers/gemini.js";
-export { CohereProvider } from "./providers/cohere.js";
-export { MistralProvider } from "./providers/mistral.js";
-export { OpenRouterProvider } from "./providers/openrouter.js";
+export { OpenAIProvider } from "./providers/openai";
+export { AnthropicProvider } from "./providers/anthropic";
+export { GeminiProvider } from "./providers/gemini";
+export { CohereProvider } from "./providers/cohere";
+export { MistralProvider } from "./providers/mistral";
+export { OpenRouterProvider } from "./providers/openrouter";
+export { GitHubCopilotProvider } from "./providers/github-copilot";
 
 // Model management
-export { ModelManager } from "./models/ModelManager.js";
-export { litellmModelManager } from "./utils/litellm-models.js";
+export { ModelManager } from "./models/ModelManager";
+export { litellmModelManager } from "./utils/litellm-models";
 
 // Pricing and usage tracking
-export { PricingCalculator } from "./pricing/PricingCalculator.js";
-export type { CostBreakdown } from "./pricing/PricingCalculator.js";
+export { PricingCalculator } from "./pricing/PricingCalculator";
+export type { CostBreakdown } from "./pricing/PricingCalculator";
 
-export { UsageTracker } from "./usage/UsageTracker.js";
+export { UsageTracker } from "./usage/UsageTracker";
 export type {
   UsageStats,
   RequestRecord,
   UsageTrend,
-} from "./usage/UsageTracker.js";
+} from "./usage/UsageTracker";
 
 // Version
 export const VERSION = "1.0.0";

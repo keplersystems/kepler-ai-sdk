@@ -7,35 +7,50 @@ import type {
   ModelInfo,
   Message,
   ToolDefinition,
-} from "../core/interfaces.js";
-import { LLMError } from "../errors/LLMError.js";
-import { litellmModelManager } from "../utils/litellm-models.js";
+} from "../core/interfaces";
+import { LLMError } from "../errors/LLMError";
+import { litellmModelManager } from "../utils/litellm-models";
+import { OAuthConfig } from "../core/oauth";
+import { OAuth } from "../auth/oauth";
 
 /**
  * Provider adapter for Anthropic's Claude API
- * Supports Claude models with advanced reasoning capabilities
+ * Supports both API key and OAuth authentication
  */
 export class AnthropicProvider implements ProviderAdapter {
   readonly name = "anthropic";
 
   /** Anthropic SDK client instance */
   private client: Anthropic;
+  
+  /** OAuth instance (if using OAuth) */
+  private oauth?: OAuth;
 
   /**
    * Create a new Anthropic provider instance
    * @param config - Configuration options for the Anthropic client
    */
   constructor(config: {
-    /** Anthropic API key */
+    /** API key for authentication */
     apiKey: string;
-
+    /** Custom base URL (for proxies) */
+    baseURL?: string;
+  } | {
+    /** OAuth configuration */
+    oauth: OAuthConfig;
     /** Custom base URL (for proxies) */
     baseURL?: string;
   }) {
+    // Initialize client
     this.client = new Anthropic({
-      apiKey: config.apiKey,
+      apiKey: 'apiKey' in config ? config.apiKey : 'placeholder', // OAuth will override this
       baseURL: config.baseURL,
     });
+    
+    // Set up OAuth if provided
+    if ('oauth' in config) {
+      this.oauth = new OAuth({ ...config.oauth, provider: 'anthropic' });
+    }
   }
 
   /**
@@ -46,8 +61,9 @@ export class AnthropicProvider implements ProviderAdapter {
   ): Promise<CompletionResponse> {
     try {
       const { system, messages } = this.extractSystemMessage(request.messages);
+      const client = await this.getClient();
 
-      const response = await this.client.messages.create({
+      const response = await client.messages.create({
         model: request.model,
         system,
         messages: this.convertMessages(messages),
@@ -59,8 +75,8 @@ export class AnthropicProvider implements ProviderAdapter {
         stop_sequences: Array.isArray(request.stop)
           ? request.stop
           : request.stop
-          ? [request.stop]
-          : undefined,
+            ? [request.stop]
+            : undefined,
       });
 
       return this.convertResponse(response);
@@ -77,8 +93,9 @@ export class AnthropicProvider implements ProviderAdapter {
   ): AsyncIterable<CompletionChunk> {
     try {
       const { system, messages } = this.extractSystemMessage(request.messages);
+      const client = await this.getClient();
 
-      const stream = await this.client.messages.create({
+      const stream = await client.messages.create({
         model: request.model,
         system,
         messages: this.convertMessages(messages),
@@ -105,8 +122,7 @@ export class AnthropicProvider implements ProviderAdapter {
       return await litellmModelManager.getModelsByProvider("anthropic");
     } catch (error) {
       throw new LLMError(
-        `Failed to fetch Anthropic models from LiteLLM: ${
-          error instanceof Error ? error.message : "Unknown error"
+        `Failed to fetch Anthropic models from LiteLLM: ${error instanceof Error ? error.message : "Unknown error"
         }`,
         error instanceof Error ? error : undefined,
         { provider: "anthropic" }
@@ -122,13 +138,94 @@ export class AnthropicProvider implements ProviderAdapter {
       return await litellmModelManager.getModelInfo(modelId, "anthropic");
     } catch (error) {
       throw new LLMError(
-        `Failed to get Anthropic model '${modelId}' from LiteLLM: ${
-          error instanceof Error ? error.message : "Unknown error"
+        `Failed to get Anthropic model '${modelId}' from LiteLLM: ${error instanceof Error ? error.message : "Unknown error"
         }`,
         error instanceof Error ? error : undefined,
         { provider: "anthropic" }
       );
     }
+  }
+
+  /**
+   * OAuth helper methods (if using OAuth)
+   */
+  async initiateOAuth() {
+    if (!this.oauth) {
+      throw new LLMError('OAuth not configured for this provider');
+    }
+    return await this.oauth.initiateAuth();
+  }
+
+  async completeOAuth(code: string, codeVerifier?: string) {
+    if (!this.oauth) {
+      throw new LLMError('OAuth not configured for this provider');
+    }
+    await this.oauth.completeAuth(code, codeVerifier);
+  }
+
+  /**
+   * Get OAuth authorization URL (uses centralized OAuth class)
+   */
+  async getOAuthUrl() {
+    if (!this.oauth) {
+      throw new LLMError('OAuth not configured for this provider');
+    }
+    return await this.oauth.initiateAuth();
+  }
+
+  /**
+   * Get OAuth authorization URL with proper SHA256 hashing (async)
+   * @deprecated Use getOAuthUrl() instead - both now use proper SHA256 hashing
+   */
+  async getOAuthUrlSecure() {
+    return await this.getOAuthUrl();
+  }
+
+
+  /**
+   * Get configured client with proper authentication
+   */
+  private async getClient(): Promise<Anthropic> {
+    if (this.oauth) {
+      // Use OAuth token with custom fetch (Claude Code spoofing approach)
+      return new Anthropic({
+        apiKey: undefined as any, // Explicitly undefined to prevent SDK from setting auth
+        authToken: undefined as any, // Explicitly undefined
+        baseURL: this.client.baseURL,
+        defaultHeaders: {}, // Empty default headers
+        fetch: async (input: any, init: any) => {
+          const accessToken = await this.oauth!.getAccessToken();
+          
+          // Start with fresh headers to avoid conflicts
+          const cleanHeaders: Record<string, string> = {
+            "content-type": "application/json",
+            "authorization": `Bearer ${accessToken}`,
+            "anthropic-beta": "oauth-2025-04-20",
+            "anthropic-version": "2023-06-01",
+            "user-agent": "ai-sdk/anthropic",
+          };
+          
+          // Add any other headers from init, but skip auth-related ones
+          if (init.headers) {
+            Object.entries(init.headers).forEach(([key, value]) => {
+              const lowerKey = key.toLowerCase();
+              if (!lowerKey.includes('auth') && !lowerKey.includes('api-key') && 
+                  lowerKey !== 'x-api-key' && lowerKey !== 'authorization') {
+                cleanHeaders[key] = value as string;
+              }
+            });
+          }
+          
+          return fetch(input, {
+            ...init,
+            headers: cleanHeaders,
+          });
+        },
+      });
+    }
+    
+    // Use existing API key client
+    return this.client;
   }
 
   /**
@@ -142,12 +239,22 @@ export class AnthropicProvider implements ProviderAdapter {
     const systemMessages = messages.filter((m) => m.role === "system");
     const nonSystemMessages = messages.filter((m) => m.role !== "system");
 
-    const system =
-      systemMessages.length > 0
-        ? systemMessages.map((m) => m.content as string).join("\n")
-        : undefined;
+    let systemText = systemMessages.length > 0
+      ? systemMessages.map((m) => m.content as string).join("\n")
+      : "";
 
-    return { system, messages: nonSystemMessages };
+    // Add Claude Code spoofing for OAuth authentication (following Fabric approach)
+    if (this.oauth) {
+      const claudeCodeMessage = "You are Claude Code, Anthropic's official CLI for Claude.";
+      systemText = systemText 
+        ? `${claudeCodeMessage}\n\n${systemText}`
+        : claudeCodeMessage;
+    }
+
+    return { 
+      system: systemText || undefined, 
+      messages: nonSystemMessages 
+    };
   }
 
   /**
@@ -286,10 +393,10 @@ export class AnthropicProvider implements ProviderAdapter {
         finished: true,
         usage: chunk.usage
           ? {
-              promptTokens: chunk.usage.input_tokens,
-              completionTokens: chunk.usage.output_tokens,
-              totalTokens: chunk.usage.input_tokens + chunk.usage.output_tokens,
-            }
+            promptTokens: chunk.usage.input_tokens,
+            completionTokens: chunk.usage.output_tokens,
+            totalTokens: chunk.usage.input_tokens + chunk.usage.output_tokens,
+          }
           : undefined,
       };
     }
@@ -322,10 +429,6 @@ export class AnthropicProvider implements ProviderAdapter {
   }
 
   /**
-   * Convert Anthropic model info to unified format
-   */
-
-  /**
    * Handle Anthropic API errors and convert to LLMError
    */
   private handleError(error: unknown, operation: string): never {
@@ -350,4 +453,4 @@ export class AnthropicProvider implements ProviderAdapter {
 
     throw new LLMError(`Anthropic ${operation} failed with unknown error`);
   }
-}
+} 
