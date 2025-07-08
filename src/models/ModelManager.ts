@@ -27,6 +27,15 @@ export class ModelManager {
     }
 
     /**
+     * Get a provider by name
+     * @param name - The name of the provider
+     * @returns The provider adapter or undefined if not found
+     */
+    getProvider(name: string): ProviderAdapter | undefined {
+        return this.providers.get(name);
+    }
+
+    /**
      * List all available models, optionally filtered by provider
      * @param provider - Optional provider name to filter by
      * @param forceRefresh - Whether to bypass cache and fetch fresh data

@@ -399,13 +399,15 @@ Optional methods (if supported):
 
 ## Examples
 
-Check out the `examples/` directory for complete working examples:
+Check out the `examples/` directory for complete working examples. The examples are numbered to provide a clear learning path:
 
-- `basic-usage.ts` - Basic completion and model management
-- `streaming.ts` - Streaming responses
-- `tools.ts` - Function calling examples
-- `multimodal.ts` - Working with images and documents
-- `cost-tracking.ts` - Usage and cost analysis
+- `01-basic-usage.ts`: Demonstrates fundamental features like initializing the `ModelManager`, listing models, and generating simple completions.
+- `02-streaming.ts`: Shows how to handle streaming responses for real-time applications.
+- `03-tool-usage.ts`: Covers how to define and use tools with supported models.
+- `04-multimodality.ts`: Provides an example of sending images to vision-capable models.
+- `05-embeddings.ts`: Explains how to generate text embeddings.
+- `06-cost-tracking.ts`: Demonstrates how to use the `PricingCalculator` and `UsageTracker` to monitor API costs.
+- `07-oauth-and-custom-providers.ts`: Covers advanced topics like setting up OAuth and creating custom provider adapters.
 
 ## Development
 
@@ -417,7 +419,7 @@ bun install
 bun run build
 
 # Run examples
-bun run examples/basic-usage.ts
+bun run examples/01-basic-usage.ts
 ```
 
 ## Contributing
