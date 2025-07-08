@@ -5,7 +5,7 @@ import {
     ModelManager,
     PricingCalculator,
     UsageTracker
-} from '../src/index.js';
+} from '../src/index';
 
 // Example: Basic usage of the Kepler AI SDK
 async function basicExample() {

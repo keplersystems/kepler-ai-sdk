@@ -3,7 +3,7 @@ import {
     ModelManager,
     PricingCalculator,
     UsageTracker
-} from '../src/index.js';
+} from '../src/index';
 
 // Example: Using all new providers
 async function newProvidersExample() {

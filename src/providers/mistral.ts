@@ -11,9 +11,9 @@ import type {
   ToolCall,
   EmbeddingRequest,
   EmbeddingResponse,
-} from "../core/interfaces.js";
-import { LLMError } from "../errors/LLMError.js";
-import { litellmModelManager } from "../utils/litellm-models.js";
+} from "../core/interfaces";
+import { LLMError } from "../errors/LLMError";
+import { litellmModelManager } from "../utils/litellm-models";
 
 /**
  * Provider adapter for Mistral AI's API
@@ -60,8 +60,8 @@ export class MistralProvider implements ProviderAdapter {
         stop: Array.isArray(request.stop)
           ? request.stop
           : request.stop
-          ? [request.stop]
-          : undefined,
+            ? [request.stop]
+            : undefined,
       };
 
       // Add tools if provided
@@ -101,8 +101,8 @@ export class MistralProvider implements ProviderAdapter {
         stop: Array.isArray(request.stop)
           ? request.stop
           : request.stop
-          ? [request.stop]
-          : undefined,
+            ? [request.stop]
+            : undefined,
       };
 
       // Add tools if provided
@@ -145,8 +145,7 @@ export class MistralProvider implements ProviderAdapter {
       return await litellmModelManager.getModelInfo(modelId, "mistral");
     } catch (error) {
       throw new LLMError(
-        `Failed to get Mistral model '${modelId}' from LiteLLM: ${
-          error instanceof Error ? error.message : "Unknown error"
+        `Failed to get Mistral model '${modelId}' from LiteLLM: ${error instanceof Error ? error.message : "Unknown error"
         }`,
         error instanceof Error ? error : undefined,
         { provider: "mistral" }

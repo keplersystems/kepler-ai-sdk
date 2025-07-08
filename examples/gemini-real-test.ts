@@ -1,4 +1,4 @@
-import { GeminiProvider } from "../src/providers/gemini.js";
+import { GeminiProvider } from "../src/providers/gemini";
 import { sampleImageBase64, sampleVideoBase64, sampleAudioBase64, samplePDFBase64 } from `./sample-media`;
 
 /**

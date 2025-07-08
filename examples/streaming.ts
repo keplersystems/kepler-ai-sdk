@@ -1,4 +1,4 @@
-import { OpenAIProvider, AnthropicProvider } from '../src/index.js';
+import { OpenAIProvider, AnthropicProvider } from '../src/index';
 
 // Example: Streaming with OpenAI
 async function openAIStreamingExample() {

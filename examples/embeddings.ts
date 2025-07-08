@@ -1,7 +1,7 @@
 import {
-    OpenAIProvider
+    OpenAIProvider,
     UsageTracker
-} from '../src/index.js';
+} from '../src/index';
 
 // Example: Embedding generation and comparison
 async function embeddingExample() {

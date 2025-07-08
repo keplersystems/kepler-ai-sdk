@@ -1,5 +1,5 @@
-import type { TokenUsage, CompletionRequest } from "../core/interfaces.js";
-import { litellmModelManager } from "../utils/litellm-models.js";
+import type { TokenUsage, CompletionRequest } from "../core/interfaces";
+import { litellmModelManager } from "../utils/litellm-models";
 
 /**
  * Detailed cost breakdown for a completion
@@ -36,7 +36,7 @@ export interface CostBreakdown {
  */
 export class PricingCalculator {
   /** Map of model ID to pricing information */
-  constructor() {}
+  constructor() { }
 
   /**
    * Calculate cost for a completed request

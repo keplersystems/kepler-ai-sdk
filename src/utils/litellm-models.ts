@@ -2,7 +2,7 @@ import type {
   ModelInfo,
   ModelCapabilities,
   ModelPricing,
-} from "../core/interfaces.js";
+} from "../core/interfaces";
 
 /**
  * LiteLLM model data structure

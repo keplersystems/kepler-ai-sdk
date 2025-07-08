@@ -1,4 +1,4 @@
-import { OpenAIProvider } from '../src/index.js';
+import { OpenAIProvider } from '../src/index';
 import * as fs from 'fs';
 import * as path from 'path';
 

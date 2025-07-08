@@ -1,5 +1,5 @@
-import { MistralProvider } from "../src/providers/mistral.js";
-import type { ToolDefinition } from "../src/core/interfaces.js";
+import { MistralProvider } from "../src/providers/mistral";
+import type { ToolDefinition } from "../src/core/interfaces";
 
 /**
  * Comprehensive example demonstrating Mistral provider capabilities

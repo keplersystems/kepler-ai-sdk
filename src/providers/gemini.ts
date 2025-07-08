@@ -16,9 +16,9 @@ import type {
   ImageResponse,
   AudioRequest,
   AudioResponse,
-} from "../core/interfaces.js";
-import { LLMError } from "../errors/LLMError.js";
-import { litellmModelManager } from "../utils/litellm-models.js";
+} from "../core/interfaces";
+import { LLMError } from "../errors/LLMError";
+import { litellmModelManager } from "../utils/litellm-models";
 
 /**
  * WAV conversion options interface
@@ -95,8 +95,8 @@ export class GeminiProvider implements ProviderAdapter {
           stopSequences: Array.isArray(request.stop)
             ? request.stop
             : request.stop
-            ? [request.stop]
-            : undefined,
+              ? [request.stop]
+              : undefined,
         },
       };
 
@@ -152,8 +152,8 @@ export class GeminiProvider implements ProviderAdapter {
           stopSequences: Array.isArray(request.stop)
             ? request.stop
             : request.stop
-            ? [request.stop]
-            : undefined,
+              ? [request.stop]
+              : undefined,
         },
       };
 
@@ -190,8 +190,7 @@ export class GeminiProvider implements ProviderAdapter {
       return await litellmModelManager.getModelsByProvider("gemini");
     } catch (error) {
       throw new LLMError(
-        `Failed to fetch Gemini models from LiteLLM: ${
-          error instanceof Error ? error.message : "Unknown error"
+        `Failed to fetch Gemini models from LiteLLM: ${error instanceof Error ? error.message : "Unknown error"
         }`,
         error instanceof Error ? error : undefined,
         { provider: "gemini" }
@@ -207,8 +206,7 @@ export class GeminiProvider implements ProviderAdapter {
       return await litellmModelManager.getModelInfo(modelId, "gemini");
     } catch (error) {
       throw new LLMError(
-        `Failed to get Gemini model '${modelId}' from LiteLLM: ${
-          error instanceof Error ? error.message : "Unknown error"
+        `Failed to get Gemini model '${modelId}' from LiteLLM: ${error instanceof Error ? error.message : "Unknown error"
         }`,
         error instanceof Error ? error : undefined,
         { provider: "gemini" }
@@ -621,12 +619,12 @@ export class GeminiProvider implements ProviderAdapter {
 
     const usage = chunk.usageMetadata
       ? {
-          promptTokens: chunk.usageMetadata.promptTokenCount || 0,
-          completionTokens: chunk.usageMetadata.candidatesTokenCount || 0,
-          totalTokens: chunk.usageMetadata.totalTokenCount || 0,
-          cachedTokens:
-            chunk.usageMetadata.cachedContentTokenCount || undefined,
-        }
+        promptTokens: chunk.usageMetadata.promptTokenCount || 0,
+        completionTokens: chunk.usageMetadata.candidatesTokenCount || 0,
+        totalTokens: chunk.usageMetadata.totalTokenCount || 0,
+        cachedTokens:
+          chunk.usageMetadata.cachedContentTokenCount || undefined,
+      }
       : undefined;
 
     return {

@@ -1,4 +1,4 @@
-import { OpenAIProvider, AnthropicProvider } from '../src/index.js';
+import { OpenAIProvider, AnthropicProvider } from '../src/index';
 
 // Mock function to simulate an API call
 function getCurrentWeather(city: string, unit: 'celsius' | 'fahrenheit' = 'celsius') {

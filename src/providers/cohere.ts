@@ -11,9 +11,9 @@ import type {
   ToolCall,
   EmbeddingRequest,
   EmbeddingResponse,
-} from "../core/interfaces.js";
-import { LLMError } from "../errors/LLMError.js";
-import { litellmModelManager } from "../utils/litellm-models.js";
+} from "../core/interfaces";
+import { LLMError } from "../errors/LLMError";
+import { litellmModelManager } from "../utils/litellm-models";
 
 /**
  * Provider adapter for Cohere's API
@@ -64,8 +64,8 @@ export class CohereProvider implements ProviderAdapter {
         stopSequences: Array.isArray(request.stop)
           ? request.stop
           : request.stop
-          ? [request.stop]
-          : undefined,
+            ? [request.stop]
+            : undefined,
       };
 
       if (request.tools && request.tools.length > 0) {
@@ -102,8 +102,8 @@ export class CohereProvider implements ProviderAdapter {
         stopSequences: Array.isArray(request.stop)
           ? request.stop
           : request.stop
-          ? [request.stop]
-          : undefined,
+            ? [request.stop]
+            : undefined,
       };
 
       if (request.tools && request.tools.length > 0) {
@@ -128,8 +128,7 @@ export class CohereProvider implements ProviderAdapter {
       return await litellmModelManager.getModelsByProvider("cohere");
     } catch (error) {
       throw new LLMError(
-        `Failed to fetch Cohere models from LiteLLM: ${
-          error instanceof Error ? error.message : "Unknown error"
+        `Failed to fetch Cohere models from LiteLLM: ${error instanceof Error ? error.message : "Unknown error"
         }`,
         error instanceof Error ? error : undefined,
         { provider: "cohere" }
@@ -145,8 +144,7 @@ export class CohereProvider implements ProviderAdapter {
       return await litellmModelManager.getModelInfo(modelId, "cohere");
     } catch (error) {
       throw new LLMError(
-        `Failed to get Cohere model '${modelId}' from LiteLLM: ${
-          error instanceof Error ? error.message : "Unknown error"
+        `Failed to get Cohere model '${modelId}' from LiteLLM: ${error instanceof Error ? error.message : "Unknown error"
         }`,
         error instanceof Error ? error : undefined,
         { provider: "cohere" }
@@ -404,12 +402,12 @@ export class CohereProvider implements ProviderAdapter {
     if (chunk.eventType === "stream-end") {
       const usage = chunk.response?.meta?.billedUnits
         ? {
-            promptTokens: chunk.response.meta.billedUnits.inputTokens || 0,
-            completionTokens: chunk.response.meta.billedUnits.outputTokens || 0,
-            totalTokens:
-              (chunk.response.meta.billedUnits.inputTokens || 0) +
-              (chunk.response.meta.billedUnits.outputTokens || 0),
-          }
+          promptTokens: chunk.response.meta.billedUnits.inputTokens || 0,
+          completionTokens: chunk.response.meta.billedUnits.outputTokens || 0,
+          totalTokens:
+            (chunk.response.meta.billedUnits.inputTokens || 0) +
+            (chunk.response.meta.billedUnits.outputTokens || 0),
+        }
         : undefined;
 
       return {

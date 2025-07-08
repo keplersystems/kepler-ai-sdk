@@ -1,5 +1,5 @@
-import type { ProviderAdapter, ModelInfo, ModelCapabilities } from '../core/interfaces.js';
-import { LLMError } from '../errors/LLMError.js';
+import type { ProviderAdapter, ModelInfo, ModelCapabilities } from '../core/interfaces';
+import { LLMError } from '../errors/LLMError';
 
 /**
  * Manages models across all providers with intelligent caching

@@ -3,7 +3,7 @@ import {
     PricingCalculator,
     UsageTracker,
     ModelManager
-} from '../src/index.js';
+} from '../src/index';
 
 // Example: Cost and usage tracking
 async function costTrackingExample() {

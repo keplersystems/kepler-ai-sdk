@@ -1,5 +1,5 @@
-import { OpenRouterProvider } from "../src/providers/openrouter.js";
-import type { ToolDefinition } from "../src/core/interfaces.js";
+import { OpenRouterProvider } from "../src/providers/openrouter";
+import type { ToolDefinition } from "../src/core/interfaces";
 
 /**
  * Comprehensive example demonstrating OpenRouter provider capabilities

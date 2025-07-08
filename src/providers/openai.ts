@@ -16,9 +16,9 @@ import type {
   ImageResponse,
   AudioRequest,
   AudioResponse,
-} from "../core/interfaces.js";
-import { LLMError } from "../errors/LLMError.js";
-import { litellmModelManager } from "../utils/litellm-models.js";
+} from "../core/interfaces";
+import { LLMError } from "../errors/LLMError";
+import { litellmModelManager } from "../utils/litellm-models";
 
 /**
  * Provider adapter for OpenAI's API
@@ -59,14 +59,14 @@ export class OpenAIProvider implements ProviderAdapter {
   ): Promise<CompletionResponse> {
     try {
       const openAIRequest: OpenAI.Chat.ChatCompletionCreateParamsNonStreaming =
-        {
-          model: request.model,
-          messages: this.convertMessages(request.messages),
-          temperature: request.temperature,
-          max_tokens: request.maxTokens,
-          stream: false,
-          stop: request.stop,
-        };
+      {
+        model: request.model,
+        messages: this.convertMessages(request.messages),
+        temperature: request.temperature,
+        max_tokens: request.maxTokens,
+        stream: false,
+        stop: request.stop,
+      };
 
       if (request.tools) {
         openAIRequest.tools = this.convertTools(request.tools);
@@ -115,8 +115,7 @@ export class OpenAIProvider implements ProviderAdapter {
       return await litellmModelManager.getModelsByProvider("openai");
     } catch (error) {
       throw new LLMError(
-        `Failed to fetch OpenAI models from LiteLLM: ${
-          error instanceof Error ? error.message : "Unknown error"
+        `Failed to fetch OpenAI models from LiteLLM: ${error instanceof Error ? error.message : "Unknown error"
         }`,
         error instanceof Error ? error : undefined,
         { provider: "openai" }
@@ -132,8 +131,7 @@ export class OpenAIProvider implements ProviderAdapter {
       return await litellmModelManager.getModelInfo(modelId, "openai");
     } catch (error) {
       throw new LLMError(
-        `Failed to get OpenAI model '${modelId}' from LiteLLM: ${
-          error instanceof Error ? error.message : "Unknown error"
+        `Failed to get OpenAI model '${modelId}' from LiteLLM: ${error instanceof Error ? error.message : "Unknown error"
         }`,
         error instanceof Error ? error : undefined,
         { provider: "openai" }
@@ -361,10 +359,10 @@ export class OpenAIProvider implements ProviderAdapter {
       finished: choice?.finish_reason !== null,
       usage: chunk.usage
         ? {
-            promptTokens: chunk.usage.prompt_tokens || 0,
-            completionTokens: chunk.usage.completion_tokens || 0,
-            totalTokens: chunk.usage.total_tokens || 0,
-          }
+          promptTokens: chunk.usage.prompt_tokens || 0,
+          completionTokens: chunk.usage.completion_tokens || 0,
+          totalTokens: chunk.usage.total_tokens || 0,
+        }
         : undefined,
     };
   }

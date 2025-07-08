@@ -14,9 +14,9 @@ import type {
   EmbeddingResponse,
   ImageRequest,
   ImageResponse,
-} from "../core/interfaces.js";
-import { LLMError } from "../errors/LLMError.js";
-import { litellmModelManager } from "../utils/litellm-models.js";
+} from "../core/interfaces";
+import { LLMError } from "../errors/LLMError";
+import { litellmModelManager } from "../utils/litellm-models";
 
 /**
  * Provider adapter for OpenRouter's unified LLM API
@@ -78,14 +78,14 @@ export class OpenRouterProvider implements ProviderAdapter {
   ): Promise<CompletionResponse> {
     try {
       const openAIRequest: OpenAI.Chat.ChatCompletionCreateParamsNonStreaming =
-        {
-          model: request.model,
-          messages: this.convertMessages(request.messages),
-          temperature: request.temperature,
-          max_tokens: request.maxTokens,
-          stream: false,
-          stop: request.stop,
-        };
+      {
+        model: request.model,
+        messages: this.convertMessages(request.messages),
+        temperature: request.temperature,
+        max_tokens: request.maxTokens,
+        stream: false,
+        stop: request.stop,
+      };
 
       if (request.tools) {
         openAIRequest.tools = this.convertTools(request.tools);
@@ -438,10 +438,10 @@ export class OpenRouterProvider implements ProviderAdapter {
       toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
       usage: chunk.usage
         ? {
-            promptTokens: chunk.usage.prompt_tokens || 0,
-            completionTokens: chunk.usage.completion_tokens || 0,
-            totalTokens: chunk.usage.total_tokens || 0,
-          }
+          promptTokens: chunk.usage.prompt_tokens || 0,
+          completionTokens: chunk.usage.completion_tokens || 0,
+          totalTokens: chunk.usage.total_tokens || 0,
+        }
         : undefined,
     };
   }

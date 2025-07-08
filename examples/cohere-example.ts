@@ -1,8 +1,8 @@
-import { CohereProvider } from "../src/providers/cohere.js";
+import { CohereProvider } from "../src/providers/cohere";
 import type {
   CompletionRequest,
   ToolDefinition,
-} from "../src/core/interfaces.js";
+} from "../src/core/interfaces";
 
 async function main() {
   // Initialize Cohere provider

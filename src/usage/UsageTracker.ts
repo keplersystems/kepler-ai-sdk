@@ -1,4 +1,4 @@
-import type { TokenUsage } from '../core/interfaces.js';
+import type { TokenUsage } from "../core/interfaces";
 
 /**
  * Usage statistics for a model or time period
