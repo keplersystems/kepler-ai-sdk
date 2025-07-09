@@ -1,5 +1,28 @@
 {
-  "name": "kepler-ai-sdk",
+  "name": "@keplersystems/kepler-ai-sdk",
+  "version": "1.0.0",
+  "description": "A TypeScript library that provides unified access to multiple LLM providers using their official SDKs",
+  "author": "Kepler Systems",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/keplersystems/kepler-ai-sdk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/keplersystems/kepler-ai-sdk/issues"
+  },
+  "homepage": "https://docs.kepler.systems",
+  "keywords": [
+    "ai",
+    "llm",
+    "openai",
+    "anthropic",
+    "gemini",
+    "mistral",
+    "cohere",
+    "typescript",
+    "sdk"
+  ],
   "module": "index.ts",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

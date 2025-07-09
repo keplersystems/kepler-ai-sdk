@@ -437,5 +437,5 @@ MIT License - see [LICENSE](LICENSE) for details.
 ## Support
 
 - 📖 [Documentation](https://docs.kepler.systems)
-- 🐛 [Issue Tracker](https://github.com/kepler-systems/kepler-ai-sdk/issues)
+- 🐛 [Issue Tracker](https://github.com/keplersystems/kepler-ai-sdk/issues)
 - 📧 [Email Support](mailto:contact@kepler.systems)
