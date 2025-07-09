@@ -28,14 +28,7 @@ A production-ready TypeScript library that provides unified access to multiple L
 ## Installation
 
 ```bash
-# Using bun
 bun add kepler-ai-sdk
-
-# Using npm
-npm install kepler-ai-sdk
-
-# Using yarn
-yarn add kepler-ai-sdk
 ```
 
 ### Peer Dependencies
@@ -43,20 +36,7 @@ yarn add kepler-ai-sdk
 You'll also need the official provider SDKs for the providers you want to use:
 
 ```bash
-# For OpenAI
-bun add openai
-
-# For Anthropic  
-bun add @anthropic-ai/sdk
-
-# For Google Gemini
-bun add @google/generative-ai
-
-# For Mistral
-bun add @mistralai/mistralai
-
-# For Cohere
-bun add cohere-ai
+bun add openai @anthropic-ai/sdk @google/gen-ai @mistralai/mistralai cohere-ai
 ```
 
 ## Quick Start
@@ -456,7 +436,6 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Support
 
-- 📖 [Documentation](https://docs.kepler-ai.dev)
-- 💬 [Discord Community](https://discord.gg/kepler-ai)
-- 🐛 [Issue Tracker](https://github.com/kepler-ai/sdk/issues)
-- 📧 [Email Support](mailto:support@kepler-ai.dev)
+- 📖 [Documentation](https://docs.kepler.systems)
+- 🐛 [Issue Tracker](https://github.com/kepler-systems/kepler-ai-sdk/issues)
+- 📧 [Email Support](mailto:contact@kepler.systems)
