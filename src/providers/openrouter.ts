@@ -10,8 +10,6 @@ import type {
   ToolDefinition,
   ToolCall,
   ResponseFormat,
-  EmbeddingRequest,
-  EmbeddingResponse,
   ImageRequest,
   ImageResponse,
 } from "../core/interfaces";
@@ -210,33 +208,6 @@ export class OpenRouterProvider implements ProviderAdapter {
   async getModel(modelId: string): Promise<ModelInfo | null> {
     const models = await this.listModels();
     return models.find((m) => m.id === modelId) || null;
-  }
-
-  /**
-   * Generate embeddings using OpenRouter's embeddings API
-   */
-  async generateEmbedding(
-    request: EmbeddingRequest
-  ): Promise<EmbeddingResponse> {
-    try {
-      const response = await this.client.embeddings.create({
-        model: request.model,
-        input: request.input,
-        encoding_format: "float",
-      });
-
-      return {
-        embeddings: response.data.map((item) => item.embedding),
-        usage: {
-          promptTokens: response.usage.prompt_tokens,
-          completionTokens: 0,
-          totalTokens: response.usage.total_tokens,
-        },
-        model: request.model,
-      };
-    } catch (error) {
-      throw this.handleError(error, "embedding generation");
-    }
   }
 
   /**

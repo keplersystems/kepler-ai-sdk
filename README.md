@@ -10,17 +10,20 @@ A production-ready TypeScript library that provides unified access to multiple L
 - 📊 **Built-in Analytics**: Track usage, costs, and performance
 - 🔄 **Streaming Support**: Real-time response streaming
 - 🛠️ **Tool Support**: Function calling across providers
-- 🖼️ **Multimodal**: Support for text, images, audio, and documents
+- 🖼️ **Multimodal**: Support for text, images, audio, video, and documents
 - 💰 **Cost Tracking**: Built-in pricing calculator and usage analytics
 
 ## Supported Providers
 
-| Provider      | Models                         | Streaming | Tools | Vision | Audio | Embeddings |
-| ------------- | ------------------------------ | --------- | ----- | ------ | ----- | ---------- |
-| **OpenAI**    | GPT-4o, GPT-4, GPT-3.5, o1     | ✅         | ✅     | ✅      | ✅     | ✅          |
-| **Anthropic** | Claude 4, Claude 3.5, Claude 3 | ✅         | ✅     | ✅      | ❌     | ❌          |
-
-*More providers coming soon: Google Gemini, Mistral, Cohere, OpenRouter*
+| Provider           | Models                                 | Streaming | Tools | Vision | Audio | Embeddings |
+| ------------------ | -------------------------------------- | --------- | ----- | ------ | ----- | ---------- |
+| **OpenAI**         | GPT-4.1, o3, o4-mini, TTS etc          | ✅         | ✅     | ✅      | ✅     | ✅          |
+| **Anthropic**      | Claude 4, Claude 3.5 etc               | ✅         | ✅     | ✅      | ❌     | ❌          |
+| **Google Gemini**  | Gemini 2.5 Pro, Imagen, Gemini TTS etc | ✅         | ✅     | ✅      | ✅     | ✅          |
+| **Mistral**        | Mistral Large, Mistral Embed etc       | ✅         | ✅     | ❌      | ❌     | ✅          |
+| **Cohere**         | Command A, Command R+ etc              | ✅         | ✅     | ❌      | ❌     | ✅          |
+| **OpenRouter**     | Access to 300+ models                  | ✅         | ✅     | ✅      | ❌     | ❌          |
+| **GitHub Copilot** | GPT 4.1, Claude 4 Sonnet etc           | ✅         | ❌     | ❌      | ❌     | ❌          |
 
 ## Installation
 
@@ -37,7 +40,7 @@ yarn add kepler-ai-sdk
 
 ### Peer Dependencies
 
-You'll also need the official provider SDKs:
+You'll also need the official provider SDKs for the providers you want to use:
 
 ```bash
 # For OpenAI
@@ -45,36 +48,55 @@ bun add openai
 
 # For Anthropic  
 bun add @anthropic-ai/sdk
+
+# For Google Gemini
+bun add @google/generative-ai
+
+# For Mistral
+bun add @mistralai/mistralai
+
+# For Cohere
+bun add cohere-ai
 ```
 
 ## Quick Start
 
 ```typescript
-import { OpenAIProvider, AnthropicProvider, ModelManager } from 'kepler-ai-sdk';
+import { ModelManager, OpenAIProvider, AnthropicProvider, GeminiProvider } from 'kepler-ai-sdk';
 
-// 1. Create providers
-const openai = new OpenAIProvider({
-  apiKey: process.env.OPENAI_API_KEY!
-});
-
-const anthropic = new AnthropicProvider({
-  apiKey: process.env.ANTHROPIC_API_KEY!
-});
-
-// 2. Set up model manager
+// 1. Initialize the ModelManager
 const modelManager = new ModelManager();
-modelManager.addProvider(openai);
-modelManager.addProvider(anthropic);
 
-// 3. Generate completions
-const response = await openai.generateCompletion({
-  model: 'gpt-4o',
-  messages: [
-    { role: 'user', content: 'Hello, world!' }
-  ]
-});
+// 2. Add providers
+if (process.env.OPENAI_API_KEY) {
+  modelManager.addProvider(new OpenAIProvider({ apiKey: process.env.OPENAI_API_KEY }));
+}
+if (process.env.ANTHROPIC_API_KEY) {
+  modelManager.addProvider(new AnthropicProvider({ apiKey: process.env.ANTHROPIC_API_KEY }));
+}
+if (process.env.GEMINI_API_KEY) {
+  modelManager.addProvider(new GeminiProvider({ apiKey: process.env.GEMINI_API_KEY }));
+}
 
-console.log(response.content);
+// 3. Generate a completion
+async function generate() {
+  const model = await modelManager.getModel('gpt-4o-mini');
+  if (!model) throw new Error('Model not found');
+
+  const provider = modelManager.getProvider(model.provider);
+  if (!provider) throw new Error('Provider not found');
+
+  const response = await provider.generateCompletion({
+    model: 'gpt-4o-mini',
+    messages: [
+      { role: 'user', content: 'Hello, world!' }
+    ]
+  });
+
+  console.log(response.content);
+}
+
+generate();
 ```
 
 ## Core Concepts
@@ -238,8 +260,10 @@ usage.trackUsage(response.model, response.usage, cost?.totalCost);
 
 // Get statistics
 const stats = usage.getUsage('gpt-4o');
-console.log(`Total requests: ${stats.totalRequests}`);
-console.log(`Total cost: $${stats.totalCost.toFixed(4)}`);
+if (stats && !Array.isArray(stats)) {
+  console.log(`Total requests: ${stats.totalRequests}`);
+  console.log(`Total cost: $${stats.totalCost.toFixed(4)}`);
+}
 ```
 
 ### Error Handling
@@ -429,18 +453,6 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
-
-## Roadmap
-
-- [ ] Google Gemini provider
-- [ ] Mistral provider  
-- [ ] Cohere provider
-- [ ] OpenRouter provider
-- [ ] Azure OpenAI support
-- [ ] Retry logic with exponential backoff
-- [ ] Request/response middleware
-- [ ] Batch processing
-- [ ] Model fine-tuning support
 
 ## Support
 
