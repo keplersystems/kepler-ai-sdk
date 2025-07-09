@@ -2,54 +2,51 @@
  * --- 05. EMBEDDINGS ---
  *
  * This example demonstrates how to generate embeddings for text using the
- * Kepler AI SDK. Embeddings are numerical representations of text that can
+ * Cohere provider. Embeddings are numerical representations of text that can
  * be used for various machine learning tasks like semantic search,
  * clustering, and classification.
  *
  * It covers:
- * 1.  Initializing the ModelManager and a provider that supports embeddings.
+ * 1.  Initializing the ModelManager and the Cohere provider.
  * 2.  Creating a request to generate embeddings for a piece of text.
  * 3.  Handling the response, which includes the embedding vectors.
  *
- * To run this example, you need to have your OpenAI API key set as an
+ * To run this example, you need to have your Cohere API key set as an
  * environment variable:
  *
- * export OPENAI_API_KEY="your-openai-api-key"
+ * export COHERE_API_KEY="your-cohere-api-key"
  *
- * Then, you can run this file using ts-node:
+ * Then, you can run this file using bun:
  *
- * ts-node examples/05-embeddings.ts
+ * bun run examples/05-embeddings.ts
  */
 
-import { ModelManager, OpenAIProvider } from "../src/index";
+import { ModelManager, CohereProvider } from "../src/index";
 
 async function main() {
     console.log("--- 05. EMBEDDINGS ---");
 
-    if (!process.env.OPENAI_API_KEY) {
-        console.error("❌ OPENAI_API_KEY environment variable is not set.");
+    if (!process.env.COHERE_API_KEY) {
+        console.error("❌ COHERE_API_KEY environment variable is not set.");
         return;
     }
 
     const modelManager = new ModelManager();
-    const openai = new OpenAIProvider({
-        apiKey: process.env.OPENAI_API_KEY,
+    const cohere = new CohereProvider({
+        apiKey: process.env.COHERE_API_KEY,
     });
-    modelManager.addProvider(openai);
+    modelManager.addProvider(cohere);
 
     try {
-        // 1. Define the input text
         const inputText = "Kepler is a unified SDK for interacting with LLMs.";
+        const model = "embed-english-v3.0";
 
-        // 2. Create the embedding request
         console.log(`\n🤖 Generating embedding for the text: "${inputText}"`);
-        const response = await openai.generateEmbedding({
-            model: "text-embedding-3-small",
+        const response = await cohere.generateEmbedding({
+            model,
             input: inputText,
         });
 
-        // 3. Print the results
-        // The response contains the embedding vector and token usage.
         const embedding = response.embeddings[0];
         console.log("\n✅ Embedding generated successfully!");
         console.log(`  - Dimensions: ${embedding.length}`);

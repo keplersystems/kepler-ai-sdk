@@ -2,28 +2,28 @@
  * --- 06. COST TRACKING ---
  *
  * This example demonstrates how to use the built-in cost and usage tracking
- * features of the Kepler AI SDK. This is essential for monitoring your API
- * expenses and understanding your usage patterns.
+ * features of the Kepler AI SDK with the Mistral provider. This is essential
+ * for monitoring your API expenses and understanding your usage patterns.
  *
  * It covers:
  * 1.  Initializing the `PricingCalculator` and `UsageTracker`.
- * 2.  Generating a completion with a specific model.
+ * 2.  Generating a completion with a Mistral model.
  * 3.  Calculating the cost of the completion using the `PricingCalculator`.
  * 4.  Tracking the request, token usage, and cost with the `UsageTracker`.
  * 5.  Retrieving and displaying usage statistics for a model.
  *
- * To run this example, you need to have your OpenAI API key set as an
+ * To run this example, you need to have your Mistral API key set as an
  * environment variable:
  *
- * export OPENAI_API_KEY="your-openai-api-key"
+ * export MISTRAL_API_KEY="your-mistral-api-key"
  *
- * Then, you can run this file using ts-node:
+ * Then, you can run this file using bun:
  *
- * ts-node examples/06-cost-tracking.ts
+ * bun run examples/06-cost-tracking.ts
  */
 
 import {
-    OpenAIProvider,
+    MistralProvider,
     PricingCalculator,
     UsageTracker,
 } from "../src/index";
@@ -31,23 +31,23 @@ import {
 async function main() {
     console.log("--- 06. COST TRACKING ---");
 
-    if (!process.env.OPENAI_API_KEY) {
-        console.error("❌ OPENAI_API_KEY environment variable is not set.");
+    if (!process.env.MISTRAL_API_KEY) {
+        console.error("❌ MISTRAL_API_KEY environment variable is not set.");
         return;
     }
 
     // 1. Initialize the tracking utilities
     const pricingCalculator = new PricingCalculator();
     const usageTracker = new UsageTracker();
-    const openai = new OpenAIProvider({
-        apiKey: process.env.OPENAI_API_KEY,
+    const mistral = new MistralProvider({
+        apiKey: process.env.MISTRAL_API_KEY,
     });
 
     try {
         // 2. Generate a completion
-        const model = "gpt-4o-mini";
+        const model = "mistral-medium";
         console.log(`\n🤖 Generating a completion with ${model}...`);
-        const response = await openai.generateCompletion({
+        const response = await mistral.generateCompletion({
             model,
             messages: [
                 {
@@ -62,9 +62,10 @@ async function main() {
         // 3. Calculate the cost
         // The `calculateCost` method takes the token usage and model ID to
         // determine the cost based on the provider's pricing.
+
         const costBreakdown = await pricingCalculator.calculateCost(
             response.usage,
-            response.model
+            "mistral/mistral-medium"
         );
 
         if (costBreakdown) {

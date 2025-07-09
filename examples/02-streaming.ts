@@ -1,50 +1,46 @@
 /**
  * --- 02. STREAMING ---
  *
- * This example demonstrates how to use the streaming feature of the Kepler AI SDK.
- * Streaming allows you to receive the response from the model as a series of
- * chunks, which is useful for creating real-time, interactive experiences.
+ * This example demonstrates how to use the streaming feature of the Kepler AI SDK
+ * with the Anthropic provider. Streaming allows you to receive the response from
+ * the model as a series of chunks, which is useful for creating real-time,
+ * interactive experiences.
  *
  * It covers:
- * 1.  Initializing the ModelManager and a provider (OpenAI in this case).
+ * 1.  Initializing the ModelManager and the Anthropic provider.
  * 2.  Creating a streaming completion request.
  * 3.  Iterating over the response stream and printing the chunks.
  * 4.  Handling the final response, including token usage.
  *
- * To run this example, you need to have your OpenAI API key set as an
+ * To run this example, you need to have your Anthropic API key set as an
  * environment variable:
  *
- * export OPENAI_API_KEY="your-openai-api-key"
+ * export ANTHROPIC_API_KEY="your-anthropic-api-key"
  *
- * Then, you can run this file using ts-node:
+ * Then, you can run this file using bun:
  *
- * ts-node examples/02-streaming.ts
+ * bun run examples/02-streaming.ts
  */
 
-import { ModelManager, OpenAIProvider } from "../src/index";
+import { ModelManager, AnthropicProvider } from "../src/index";
 
 async function main() {
     console.log("--- 02. STREAMING ---");
 
-    // 1. Initialize the ModelManager and add the OpenAI provider
-    // We'll use OpenAI for this example as it has robust streaming support.
-    if (!process.env.OPENAI_API_KEY) {
-        console.error("❌ OPENAI_API_KEY environment variable is not set.");
+    if (!process.env.ANTHROPIC_API_KEY) {
+        console.error("❌ ANTHROPIC_API_KEY environment variable is not set.");
         return;
     }
 
     const modelManager = new ModelManager();
-    const openai = new OpenAIProvider({
-        apiKey: process.env.OPENAI_API_KEY,
+    const anthropic = new AnthropicProvider({
+        apiKey: process.env.ANTHROPIC_API_KEY,
     });
-    modelManager.addProvider(openai);
+    modelManager.addProvider(anthropic);
 
     try {
-        // 2. Create a streaming completion request
-        // The request is similar to a regular completion, but we'll use the
-        // `streamCompletion` method on the provider.
         const request = {
-            model: "gpt-4o-mini",
+            model: "claude-3-5-sonnet-20240620",
             messages: [
                 {
                     role: "user" as const,
@@ -55,13 +51,13 @@ async function main() {
             maxTokens: 150,
         };
 
-        console.log("\n🤖 Streaming response from gpt-4o-mini...");
+        console.log(`\n🤖 Streaming response from ${request.model}...`);
         console.log("---");
 
         // 3. Iterate over the stream
         // The `streamCompletion` method returns an async iterator that yields
         // chunks of the response as they become available.
-        for await (const chunk of openai.streamCompletion(request)) {
+        for await (const chunk of anthropic.streamCompletion(request)) {
             // `chunk.delta` contains the new text in the current chunk.
             if (chunk.delta) {
                 process.stdout.write(chunk.delta);
@@ -76,7 +72,7 @@ async function main() {
                         `📊 Token usage: ${chunk.usage.totalTokens} tokens`
                     );
                 }
-                break; // Exit the loop once the stream is finished
+                break;
             }
         }
     } catch (error) {
@@ -88,7 +84,6 @@ async function main() {
     }
 }
 
-// Run the example
 if (import.meta.main) {
     main();
 }

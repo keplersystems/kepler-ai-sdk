@@ -1,57 +1,49 @@
 /**
  * --- 04. MULTIMODALITY ---
  *
- * This example demonstrates how to use multimodal models that can process
+ * This example demonstrates how to use Google's Gemini vision models to process
  * both text and images. It shows how to send an image to a model and ask
  * a question about it.
  *
  * It covers:
- * 1.  Initializing the ModelManager and a vision-capable provider (OpenAI).
+ * 1.  Initializing the ModelManager and the Gemini provider.
  * 2.  Constructing a multimodal message with both text and an image.
- * 3.  Sending the request to a vision model (e.g., gpt-4o-mini).
+ * 3.  Sending the request to a Gemini vision model.
  * 4.  Printing the model's response.
  *
- * To run this example, you need to have your OpenAI API key set as an
+ * To run this example, you need to have your Gemini API key set as an
  * environment variable:
  *
- * export OPENAI_API_KEY="your-openai-api-key"
+ * export GOOGLE_GENERATIVE_AI_API_KEY="your-gemini-api-key"
  *
- * You also need to have the sample image file at `examples/assets/sample-image.png`.
  *
- * Then, you can run this file using ts-node:
+ * Then, you can run this file using bun:
  *
- * ts-node examples/04-multimodality.ts
+ * bun run examples/04-multimodality.ts
  */
 
-import { ModelManager, OpenAIProvider, ContentPart } from "../src/index";
-import * as fs from "fs";
-import * as path from "path";
+import { ModelManager, GeminiProvider, ContentPart } from "../src/index";
+import { sampleImageBase64 } from "./assets/sample-media";
 
-// Helper function to convert an image to a base64 string
-function imageToBase64(filePath: string): string {
-    const image = fs.readFileSync(filePath);
-    return Buffer.from(image).toString("base64");
-}
 
 async function main() {
     console.log("--- 04. MULTIMODALITY ---");
 
-    if (!process.env.OPENAI_API_KEY) {
-        console.error("❌ OPENAI_API_KEY environment variable is not set.");
+    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+        console.error("❌ GOOGLE_GENERATIVE_AI_API_KEY environment variable is not set.");
         return;
     }
 
     const modelManager = new ModelManager();
-    const openai = new OpenAIProvider({
-        apiKey: process.env.OPENAI_API_KEY,
+    const gemini = new GeminiProvider({
+        apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
     });
-    modelManager.addProvider(openai);
+    modelManager.addProvider(gemini);
 
     try {
         // 1. Prepare the image
-        // We'll load the sample image and convert it to a base64 string.
-        const imagePath = path.join(__dirname, "assets", "sample-image.png");
-        const base64Image = imageToBase64(imagePath);
+        // We'll load the sample base64 image.
+        
 
         // 2. Construct the multimodal message
         // The message content is an array of 'ContentPart' objects.
@@ -66,21 +58,19 @@ async function main() {
                     },
                     {
                         type: "image" as const,
-                        imageUrl: `data:image/png;base64,${base64Image}`,
+                        imageUrl: `${sampleImageBase64}`,
                     },
                 ] as ContentPart[],
             },
         ];
 
-        // 3. Send the request to a vision model
-        console.log("\n🤖 Sending image to gpt-4o-mini for analysis...");
-        const response = await openai.generateCompletion({
-            model: "gpt-4o-mini",
+        console.log("\n🤖 Sending image to gemini-2.5-pro for analysis...");
+        const response = await gemini.generateCompletion({
+            model: "gemini-2.5-pro",
             messages,
             maxTokens: 200,
         });
 
-        // 4. Print the response
         console.log("\n💬 Model Response:");
         console.log(response.content);
     } catch (error) {
