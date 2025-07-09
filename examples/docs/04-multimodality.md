@@ -10,14 +10,7 @@ The following example demonstrates how to send an image to the `gpt-4o-mini` mod
 
 ```typescript
 import { ModelManager, OpenAIProvider, ContentPart } from "kepler-ai-sdk";
-import * as fs from "fs";
-import * as path from "path";
-
-// Helper function to convert an image to a base64 string
-function imageToBase64(filePath: string): string {
-  const image = fs.readFileSync(filePath);
-  return Buffer.from(image).toString("base64");
-}
+import { sampleImageBase64 } from "./assets/sample-media";
 
 async function main() {
   if (!process.env.OPENAI_API_KEY) {
@@ -31,10 +24,6 @@ async function main() {
   });
   modelManager.addProvider(openai);
 
-  // 1. Prepare the image
-  const imagePath = path.join(__dirname, "assets", "sample-image.png");
-  const base64Image = imageToBase64(imagePath);
-
   // 2. Construct the multimodal message
   const messages = [
     {
@@ -46,7 +35,7 @@ async function main() {
         },
         {
           type: "image" as const,
-          imageUrl: `data:image/png;base64,${base64Image}`,
+          imageUrl: `${sampleImageBase64}`,
         },
       ] as ContentPart[],
     },
