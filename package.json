@@ -1,6 +1,6 @@
 {
   "name": "@keplersystems/kepler-ai-sdk",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "A TypeScript library that provides unified access to multiple LLM providers using their official SDKs",
   "author": "Kepler Systems",
   "license": "MIT",

@@ -102,6 +102,15 @@ export class LiteLLMModelManager {
   ): Promise<ModelInfo | null> {
     const data = await this.fetchModelData();
 
+    // If user requests a prefixed model from problematic providers, try to find the non-prefixed version
+    if (modelId.startsWith('gemini/') || modelId.startsWith('mistral/')) {
+      const unprefixedId = modelId.split('/').slice(1).join('/');
+      const unprefixedData = data[unprefixedId];
+      if (unprefixedData) {
+        return this.convertToModelInfo(unprefixedId, unprefixedData);
+      }
+    }
+
     // Try exact match first
     let modelData = data[modelId];
 
@@ -128,9 +137,22 @@ export class LiteLLMModelManager {
   async getAllModels(): Promise<ModelInfo[]> {
     const data = await this.fetchModelData();
     const models: ModelInfo[] = [];
+    const seenModels = new Set<string>();
 
     for (const [modelId, modelData] of Object.entries(data)) {
-      const modelInfo = this.convertToModelInfo(modelId, modelData);
+      // Remove provider prefix for gemini and mistral to avoid duplicates
+      let normalizedId = modelId;
+      if (modelId.startsWith('gemini/') || modelId.startsWith('mistral/')) {
+        normalizedId = modelId.split('/').slice(1).join('/');
+      }
+      
+      // Skip if we've already seen this normalized model
+      if (seenModels.has(normalizedId)) {
+        continue;
+      }
+      seenModels.add(normalizedId);
+
+      const modelInfo = this.convertToModelInfo(normalizedId, modelData);
       if (modelInfo) {
         models.push(modelInfo);
       }
@@ -145,13 +167,23 @@ export class LiteLLMModelManager {
   async getModelsByProvider(provider: string): Promise<ModelInfo[]> {
     const data = await this.fetchModelData();
     const models: ModelInfo[] = [];
+    const seenModels = new Set<string>();
 
     for (const [modelId, modelData] of Object.entries(data)) {
-      if (
-        modelData.litellm_provider === provider ||
-        modelId.startsWith(`${provider}/`)
-      ) {
-        const modelInfo = this.convertToModelInfo(modelId, modelData);
+      if (modelData.litellm_provider === provider) {
+        // Remove provider prefix for gemini and mistral to avoid duplicates
+        let normalizedId = modelId;
+        if (modelId.startsWith('gemini/') || modelId.startsWith('mistral/')) {
+          normalizedId = modelId.split('/').slice(1).join('/');
+        }
+        
+        // Skip if we've already seen this normalized model
+        if (seenModels.has(normalizedId)) {
+          continue;
+        }
+        seenModels.add(normalizedId);
+
+        const modelInfo = this.convertToModelInfo(normalizedId, modelData);
         if (modelInfo) {
           models.push(modelInfo);
         }
@@ -178,9 +210,22 @@ export class LiteLLMModelManager {
   ): Promise<ModelInfo[]> {
     const data = await this.fetchModelData();
     const models: ModelInfo[] = [];
+    const seenModels = new Set<string>();
 
     for (const [modelId, modelData] of Object.entries(data)) {
-      const modelInfo = this.convertToModelInfo(modelId, modelData);
+      // Remove provider prefix for gemini and mistral to avoid duplicates
+      let normalizedId = modelId;
+      if (modelId.startsWith('gemini/') || modelId.startsWith('mistral/')) {
+        normalizedId = modelId.split('/').slice(1).join('/');
+      }
+      
+      // Skip if we've already seen this normalized model
+      if (seenModels.has(normalizedId)) {
+        continue;
+      }
+      seenModels.add(normalizedId);
+
+      const modelInfo = this.convertToModelInfo(normalizedId, modelData);
       if (!modelInfo) continue;
 
       // Check if model has all required capabilities
@@ -333,6 +378,7 @@ export class LiteLLMModelManager {
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join(" ");
   }
+
 
   /**
    * Get cache statistics
