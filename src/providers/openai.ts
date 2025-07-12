@@ -369,6 +369,14 @@ export class OpenAIProvider implements ProviderAdapter {
     const choice = chunk.choices[0];
     const delta = choice?.delta;
 
+    // Convert OpenAI tool call deltas to our format
+    const toolCallDeltas = delta?.tool_calls?.map((toolCall) => ({
+      index: toolCall.index,
+      id: toolCall.id || undefined,
+      name: toolCall.function?.name || undefined,
+      arguments: toolCall.function?.arguments || "",
+    }));
+
     return {
       id: chunk.id,
       delta: delta?.content || "",
@@ -380,6 +388,7 @@ export class OpenAIProvider implements ProviderAdapter {
           totalTokens: chunk.usage.total_tokens || 0,
         }
         : undefined,
+      toolCallDeltas: toolCallDeltas,
     };
   }
 

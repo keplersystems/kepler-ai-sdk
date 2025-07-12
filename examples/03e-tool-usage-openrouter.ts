@@ -108,6 +108,9 @@ async function main() {
         },
     };
 
+    // Determine streaming mode early
+    const useStreaming = process.env.USE_STREAMING !== "false";
+
     try {
         // 2. Send the initial request
         // We include the tool definition in the `tools` array.
@@ -125,12 +128,74 @@ async function main() {
             toolChoice: "auto" as const,
         };
 
-        // 3. Get the initial completion (non-streaming to handle tool calls properly)
-        const initialResponse = await openrouter.generateCompletion(initialRequest);
+        // 3. Get the initial completion using the specified mode
+        let initialResponse: any;
         
-        // Display the assistant's response
-        process.stdout.write(initialResponse.content);
-        
+        if (useStreaming) {
+            console.log("📡 Using streaming mode for initial request...");
+            // Collect the full response from streaming using proper OpenAI pattern
+            let fullContent = "";
+            let usage: any;
+            const finalToolCalls: { [index: number]: any } = {};
+            
+            for await (const chunk of openrouter.streamCompletion(initialRequest)) {
+                if (chunk.delta) {
+                    fullContent += chunk.delta;
+                    process.stdout.write(chunk.delta);
+                }
+                
+                // Accumulate tool call deltas (following OpenAI documentation pattern)
+                if (chunk.toolCallDeltas) {
+                    for (const toolCallDelta of chunk.toolCallDeltas) {
+                        const index = toolCallDelta.index;
+                        
+                        if (!finalToolCalls[index]) {
+                            finalToolCalls[index] = {
+                                id: toolCallDelta.id || "",
+                                name: toolCallDelta.name || "",
+                                arguments: ""
+                            };
+                        }
+                        
+                        // Accumulate the arguments string
+                        if (toolCallDelta.arguments) {
+                            finalToolCalls[index].arguments += toolCallDelta.arguments;
+                        }
+                        
+                        // Update id and name if they're provided (usually in first delta)
+                        if (toolCallDelta.id) {
+                            finalToolCalls[index].id = toolCallDelta.id;
+                        }
+                        if (toolCallDelta.name) {
+                            finalToolCalls[index].name = toolCallDelta.name;
+                        }
+                    }
+                }
+                
+                if (chunk.finished) {
+                    usage = chunk.usage;
+                    break;
+                }
+            }
+            
+            // Convert accumulated tool calls to the expected format
+            const toolCalls = Object.values(finalToolCalls).map((toolCall: any) => ({
+                id: toolCall.id,
+                name: toolCall.name,
+                arguments: toolCall.arguments ? JSON.parse(toolCall.arguments) : {}
+            }));
+            
+            initialResponse = {
+                content: fullContent,
+                toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+                usage: usage
+            };
+        } else {
+            console.log("⚡ Using non-streaming mode for initial request...");
+            initialResponse = await openrouter.generateCompletion(initialRequest);
+            // Display the assistant's response
+            process.stdout.write(initialResponse.content);
+        }
         if (initialResponse.toolCalls && initialResponse.toolCalls.length > 0) {
             console.log("\n🔧 Tool calls detected:");
             for (const toolCall of initialResponse.toolCalls) {
@@ -190,11 +255,10 @@ async function main() {
             tools: [exaSearchTool],
         };
 
-        // Support both streaming and non-streaming modes
-        const useStreaming = process.env.USE_STREAMING !== "false";
+        // Use the same streaming mode for follow-up request
         
         if (useStreaming) {
-            console.log("📡 Using streaming mode...");
+            console.log("📡 Using streaming mode for follow-up request...");
             for await (const chunk of openrouter.streamCompletion(followUpRequest)) {
                 if (chunk.delta) {
                     process.stdout.write(chunk.delta);
@@ -209,7 +273,7 @@ async function main() {
                 }
             }
         } else {
-            console.log("⚡ Using non-streaming mode...");
+            console.log("⚡ Using non-streaming mode for follow-up request...");
             const finalResponse = await openrouter.generateCompletion(followUpRequest);
             console.log(finalResponse.content);
             console.log("\n---\n✅ Complete workflow finished!");

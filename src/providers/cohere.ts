@@ -353,17 +353,63 @@ export class CohereProvider implements ProviderAdapter {
       };
     }
 
-    // Handle tool calls (if they come in streaming)
-    if (chunk.type === "tool-calls-generation") {
+    // Handle tool streaming events based on Cohere v2 API
+    if (chunk.type === "tool-plan-delta") {
+      // Tool planning phase - just pass through
       return {
         id: chunk.id || "streaming",
         delta: "",
         finished: false,
-        toolCalls: chunk.toolCalls?.map((call: any, index: number) => ({
-          id: `call_${Date.now()}_${index}`,
-          name: call.name,
-          arguments: call.parameters || {},
-        })),
+      };
+    }
+
+    if (chunk.type === "tool-call-start") {
+      // Tool call start - contains id and function name
+      const toolCallStart = chunk.delta?.message?.toolCalls;
+      if (toolCallStart) {
+        return {
+          id: chunk.id || "streaming", 
+          delta: "",
+          finished: false,
+          toolCallDeltas: [{
+            index: chunk.index,
+            id: toolCallStart.id,
+            name: toolCallStart.function?.name,
+            arguments: "", // Arguments start empty and accumulate in deltas
+          }],
+        };
+      }
+      
+      return {
+        id: chunk.id || "streaming", 
+        delta: "",
+        finished: false,
+      };
+    }
+
+    if (chunk.type === "tool-call-delta") {
+      // Tool call delta - contains partial arguments
+      const argumentsDelta = chunk.delta?.message?.toolCalls?.function?.arguments || "";
+      
+      return {
+        id: chunk.id || "streaming",
+        delta: "",
+        finished: false,
+        toolCallDeltas: [{
+          index: chunk.index,
+          id: undefined, // Only in start event
+          name: undefined, // Only in start event  
+          arguments: argumentsDelta,
+        }],
+      };
+    }
+
+    if (chunk.type === "tool-call-end") {
+      // End of tool calls
+      return {
+        id: chunk.id || "streaming",
+        delta: "",
+        finished: false,
       };
     }
 

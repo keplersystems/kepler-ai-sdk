@@ -402,27 +402,18 @@ export class OpenRouterProvider implements ProviderAdapter {
     const choice = chunk.choices[0];
     const delta = choice?.delta;
 
-    // Handle tool calls in streaming
-    const toolCalls: Partial<ToolCall>[] = [];
-    if (delta?.tool_calls) {
-      for (const toolCall of delta.tool_calls) {
-        if (toolCall.function) {
-          toolCalls.push({
-            id: toolCall.id,
-            name: toolCall.function.name,
-            arguments: toolCall.function.arguments
-              ? JSON.parse(toolCall.function.arguments)
-              : undefined,
-          });
-        }
-      }
-    }
+    // Convert OpenAI-compatible tool call deltas to our format
+    const toolCallDeltas = delta?.tool_calls?.map((toolCall) => ({
+      index: toolCall.index,
+      id: toolCall.id || undefined,
+      name: toolCall.function?.name || undefined,
+      arguments: toolCall.function?.arguments || "",
+    }));
 
     return {
       id: chunk.id,
       delta: delta?.content || "",
       finished: choice?.finish_reason !== null,
-      toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
       usage: chunk.usage
         ? {
           promptTokens: chunk.usage.prompt_tokens || 0,
@@ -430,6 +421,7 @@ export class OpenRouterProvider implements ProviderAdapter {
           totalTokens: chunk.usage.total_tokens || 0,
         }
         : undefined,
+      toolCallDeltas: toolCallDeltas,
     };
   }
 

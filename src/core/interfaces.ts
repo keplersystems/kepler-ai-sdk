@@ -307,6 +307,14 @@ export interface CompletionChunk {
     /** Partial tool calls (if any) */
     toolCalls?: Partial<ToolCall>[];
 
+    /** Tool call deltas for streaming (OpenAI format) */
+    toolCallDeltas?: Array<{
+        index: number;
+        id?: string;
+        name?: string;
+        arguments: string;
+    }>;
+
     /** Usage information (usually only in final chunk) */
     usage?: TokenUsage;
 }
