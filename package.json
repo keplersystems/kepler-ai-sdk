@@ -1,6 +1,6 @@
 {
   "name": "@keplersystems/kepler-ai-sdk",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "A TypeScript library that provides unified access to multiple LLM providers using their official SDKs",
   "author": "Kepler Systems",
   "license": "MIT",
@@ -37,6 +37,7 @@
     "@google/genai": "^1.7.0",
     "@mistralai/mistralai": "^1.7.2",
     "cohere-ai": "^7.17.1",
+    "exa-js": "^1.8.20",
     "openai": "^5.7.0"
   },
   "devDependencies": {

@@ -1,21 +1,23 @@
 /**
- * --- 03. TOOL USAGE ---
+ * --- 03E. TOOL USAGE - OPENROUTER ---
  *
- * This example demonstrates how to use tools with Anthropic's Claude models.
+ * This example demonstrates how to use tools with OpenRouter models.
+ * OpenRouter provides access to multiple AI models through a single API.
  * Tools allow you to extend the capabilities of the model by letting it
  * call external functions.
  *
  * It covers:
  * 1.  Defining a tool with a name, description, and parameters.
- * 2.  Sending a completion request with the defined tool to Claude model.
+ * 2.  Sending a completion request with the defined tool to OpenRouter model.
  * 3.  Handling the model's response, which may include a tool call.
  * 4.  Completing the tool call workflow by executing the tool and sending results back
  *
  * To run this example, you need to have your API keys set as environment variables:
  *
- * export ANTHROPIC_API_KEY="your-anthropic-api-key"
+ * export OPENROUTER_API_KEY="your-openrouter-api-key"
  * export EXA_API_KEY="your-exa-api-key"
  *
+ * Get your OpenRouter API key from: https://openrouter.ai/keys
  * Get your Exa API key from: https://exa.ai/
  *
  * You can also control the response mode:
@@ -23,10 +25,10 @@
  *
  * Then, you can run this file using bun:
  *
- * bun run examples/03-tool-usage.ts
+ * bun run examples/03e-tool-usage-openrouter.ts
  */
 
-import { ModelManager, AnthropicProvider, ToolDefinition, ToolCall, Message } from "../src/index";
+import { ModelManager, OpenRouterProvider, ToolDefinition, ToolCall, Message } from "../src/index";
 import Exa from "exa-js";
 
 // Real implementation of the exa_search tool
@@ -66,10 +68,11 @@ async function executeExaSearch(query: string): Promise<string> {
 }
 
 async function main() {
-    console.log("--- 03. TOOL USAGE ---");
+    console.log("--- 03E. TOOL USAGE - OPENROUTER ---");
 
-    if (!process.env.ANTHROPIC_API_KEY) {
-        console.error("❌ ANTHROPIC_API_KEY environment variable is not set.");
+    if (!process.env.OPENROUTER_API_KEY) {
+        console.error("❌ OPENROUTER_API_KEY environment variable is not set.");
+        console.error("Get your API key from: https://openrouter.ai/keys");
         return;
     }
 
@@ -80,10 +83,12 @@ async function main() {
     }
 
     const modelManager = new ModelManager();
-    const anthropic = new AnthropicProvider({
-        apiKey: process.env.ANTHROPIC_API_KEY,
+    const openrouter = new OpenRouterProvider({
+        apiKey: process.env.OPENROUTER_API_KEY,
+        appName: "Kepler AI SDK Tool Usage Example",
+        appUrl: "https://github.com/keplerlab/kepler-ai-sdk",
     });
-    modelManager.addProvider(anthropic);
+    modelManager.addProvider(openrouter);
 
     // 1. Define the tool
     // The tool definition tells the model what function is available,
@@ -106,9 +111,10 @@ async function main() {
     try {
         // 2. Send the initial request
         // We include the tool definition in the `tools` array.
+        // Using Claude 3.5 Sonnet via OpenRouter since we know it supports tools well
         console.log("\n🤖 Asking the model to use the search tool...");
         const initialRequest = {
-            model: "claude-3-5-sonnet-20240620",
+            model: "anthropic/claude-3.5-sonnet",
             messages: [
                 {
                     role: "user" as const,
@@ -120,7 +126,7 @@ async function main() {
         };
 
         // 3. Get the initial completion (non-streaming to handle tool calls properly)
-        const initialResponse = await anthropic.generateCompletion(initialRequest);
+        const initialResponse = await openrouter.generateCompletion(initialRequest);
         
         // Display the assistant's response
         process.stdout.write(initialResponse.content);
@@ -179,7 +185,7 @@ async function main() {
         // 5. Send follow-up request with tool results
         console.log("\n🤖 Getting final response from model...");
         const followUpRequest = {
-            model: "claude-3-5-sonnet-20240620",
+            model: "anthropic/claude-3.5-sonnet",
             messages: messagesWithToolResults,
             tools: [exaSearchTool],
         };
@@ -189,7 +195,7 @@ async function main() {
         
         if (useStreaming) {
             console.log("📡 Using streaming mode...");
-            for await (const chunk of anthropic.streamCompletion(followUpRequest)) {
+            for await (const chunk of openrouter.streamCompletion(followUpRequest)) {
                 if (chunk.delta) {
                     process.stdout.write(chunk.delta);
                 }
@@ -204,7 +210,7 @@ async function main() {
             }
         } else {
             console.log("⚡ Using non-streaming mode...");
-            const finalResponse = await anthropic.generateCompletion(followUpRequest);
+            const finalResponse = await openrouter.generateCompletion(followUpRequest);
             console.log(finalResponse.content);
             console.log("\n---\n✅ Complete workflow finished!");
             if (finalResponse.usage) {

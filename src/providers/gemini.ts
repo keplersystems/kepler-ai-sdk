@@ -89,37 +89,37 @@ export class GeminiProvider implements ProviderAdapter {
         model: request.model,
         contents,
         systemInstruction,
-        generationConfig: {
-          temperature: request.temperature,
-          maxOutputTokens: request.maxTokens,
-          stopSequences: Array.isArray(request.stop)
-            ? request.stop
-            : request.stop
-              ? [request.stop]
-              : undefined,
+        config: {
+          generationConfig: {
+            temperature: request.temperature,
+            maxOutputTokens: request.maxTokens,
+            stopSequences: Array.isArray(request.stop)
+              ? request.stop
+              : request.stop
+                ? [request.stop]
+                : undefined,
+          },
         },
       };
 
       // Add tools if provided
       if (request.tools && request.tools.length > 0) {
-        requestConfig.tools = [
+        requestConfig.config.tools = [
           {
             functionDeclarations: this.convertTools(request.tools),
           },
         ];
 
-        // Configure tool choice
-        if (request.toolChoice) {
-          requestConfig.toolConfig = this.convertToolChoice(request.toolChoice);
-        }
+        // Configure tool choice - always set when tools are provided
+        requestConfig.config.toolConfig = this.convertToolChoice(request.toolChoice);
       }
 
       // Add response format if specified
       if (request.responseFormat?.type === "json_object") {
-        requestConfig.generationConfig.responseMimeType = "application/json";
+        requestConfig.config.generationConfig.responseMimeType = "application/json";
       } else if (request.responseFormat?.type === "json_schema") {
-        requestConfig.generationConfig.responseMimeType = "application/json";
-        requestConfig.generationConfig.responseSchema =
+        requestConfig.config.generationConfig.responseMimeType = "application/json";
+        requestConfig.config.generationConfig.responseSchema =
           request.responseFormat.jsonSchema;
       }
 
@@ -146,28 +146,29 @@ export class GeminiProvider implements ProviderAdapter {
         model: request.model,
         contents,
         systemInstruction,
-        generationConfig: {
-          temperature: request.temperature,
-          maxOutputTokens: request.maxTokens,
-          stopSequences: Array.isArray(request.stop)
-            ? request.stop
-            : request.stop
-              ? [request.stop]
-              : undefined,
+        config: {
+          generationConfig: {
+            temperature: request.temperature,
+            maxOutputTokens: request.maxTokens,
+            stopSequences: Array.isArray(request.stop)
+              ? request.stop
+              : request.stop
+                ? [request.stop]
+                : undefined,
+          },
         },
       };
 
       // Add tools if provided
       if (request.tools && request.tools.length > 0) {
-        requestConfig.tools = [
+        requestConfig.config.tools = [
           {
             functionDeclarations: this.convertTools(request.tools),
           },
         ];
 
-        if (request.toolChoice) {
-          requestConfig.toolConfig = this.convertToolChoice(request.toolChoice);
-        }
+        // Configure tool choice - always set when tools are provided
+        requestConfig.config.toolConfig = this.convertToolChoice(request.toolChoice);
       }
 
       const stream = await this.client.models.generateContentStream(
@@ -434,6 +435,31 @@ export class GeminiProvider implements ProviderAdapter {
 
       // Handle simple text messages
       if (typeof msg.content === "string") {
+        // For assistant messages with tool calls, include function calls
+        if (msg.role === "assistant" && msg.toolCalls && msg.toolCalls.length > 0) {
+          const parts: any[] = [];
+          
+          // Add text content if present
+          if (msg.content) {
+            parts.push({ text: msg.content });
+          }
+          
+          // Add function calls
+          msg.toolCalls.forEach(toolCall => {
+            parts.push({
+              functionCall: {
+                name: toolCall.name,
+                args: toolCall.arguments,
+              },
+            });
+          });
+          
+          return {
+            role: "model",
+            parts,
+          };
+        }
+        
         return {
           role: msg.role === "assistant" ? "model" : "user",
           parts: [{ text: msg.content }],
@@ -533,8 +559,15 @@ export class GeminiProvider implements ProviderAdapter {
    * Convert Gemini response to unified format
    */
   private convertResponse(response: any, modelId: string): CompletionResponse {
-    const candidate = response.candidates[0];
+    const candidate = response.candidates?.[0];
+    if (!candidate) {
+      throw new LLMError("No candidate found in Gemini response");
+    }
+    
     const content = candidate.content;
+    if (!content || !content.parts) {
+      throw new LLMError("Invalid content structure in Gemini response");
+    }
 
     // Extract text content
     const textContent = content.parts

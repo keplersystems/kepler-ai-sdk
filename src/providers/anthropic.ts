@@ -26,6 +26,13 @@ export class AnthropicProvider implements ProviderAdapter {
   /** OAuth instance (if using OAuth) */
   private oauth?: OAuth;
 
+  /** State for tracking partial tool calls during streaming */
+  private streamingToolCalls: Map<number, {
+    id: string;
+    name: string;
+    partialArguments: string;
+  }> = new Map();
+
   /**
    * Create a new Anthropic provider instance
    * @param config - Configuration options for the Anthropic client
@@ -92,6 +99,9 @@ export class AnthropicProvider implements ProviderAdapter {
     request: CompletionRequest
   ): AsyncIterable<CompletionChunk> {
     try {
+      // Reset tool calls state for new stream
+      this.streamingToolCalls.clear();
+      
       const { system, messages } = this.extractSystemMessage(request.messages);
       const client = await this.getClient();
 
@@ -278,6 +288,24 @@ export class AnthropicProvider implements ProviderAdapter {
 
       // Handle simple text messages
       if (typeof msg.content === "string") {
+        // For assistant messages with tool calls, create content blocks
+        if (msg.role === "assistant" && msg.toolCalls && msg.toolCalls.length > 0) {
+          const content: Anthropic.ContentBlockParam[] = [
+            { type: "text", text: msg.content },
+            ...msg.toolCalls.map(toolCall => ({
+              type: "tool_use" as const,
+              id: toolCall.id,
+              name: toolCall.name,
+              input: toolCall.arguments,
+            }))
+          ];
+          
+          return {
+            role: "assistant",
+            content,
+          };
+        }
+        
         return {
           role: msg.role as "user" | "assistant",
           content: msg.content,
@@ -378,6 +406,8 @@ export class AnthropicProvider implements ProviderAdapter {
    */
   private convertChunk(chunk: any): CompletionChunk {
     // Handle different chunk types from Anthropic streaming
+    
+    // Handle text content deltas
     if (chunk.type === "content_block_delta" && chunk.delta?.text) {
       return {
         id: "streaming",
@@ -386,6 +416,68 @@ export class AnthropicProvider implements ProviderAdapter {
       };
     }
 
+    // Handle tool use content block start
+    if (chunk.type === "content_block_start" && chunk.content_block?.type === "tool_use") {
+      const toolBlock = chunk.content_block;
+      this.streamingToolCalls.set(chunk.index, {
+        id: toolBlock.id,
+        name: toolBlock.name,
+        partialArguments: "",
+      });
+      
+      return {
+        id: "streaming",
+        delta: "",
+        finished: false,
+      };
+    }
+
+    // Handle tool use argument deltas
+    if (chunk.type === "content_block_delta" && chunk.delta?.type === "input_json_delta") {
+      const toolCall = this.streamingToolCalls.get(chunk.index);
+      if (toolCall) {
+        toolCall.partialArguments += chunk.delta.partial_json;
+      }
+      
+      return {
+        id: "streaming",
+        delta: "",
+        finished: false,
+      };
+    }
+
+    // Handle tool use content block stop
+    if (chunk.type === "content_block_stop" && this.streamingToolCalls.has(chunk.index)) {
+      const toolCall = this.streamingToolCalls.get(chunk.index)!;
+      
+      // Try to parse the accumulated arguments
+      let parsedArguments: Record<string, unknown> = {};
+      try {
+        parsedArguments = JSON.parse(toolCall.partialArguments);
+      } catch (error) {
+        // If parsing fails, keep as empty object
+        console.warn("Failed to parse tool arguments:", toolCall.partialArguments);
+      }
+      
+      // Create the complete tool call
+      const completedToolCall = {
+        id: toolCall.id,
+        name: toolCall.name,
+        arguments: parsedArguments,
+      };
+      
+      // Clean up the partial tool call
+      this.streamingToolCalls.delete(chunk.index);
+      
+      return {
+        id: "streaming",
+        delta: "",
+        finished: false,
+        toolCalls: [completedToolCall],
+      };
+    }
+
+    // Handle message stop
     if (chunk.type === "message_stop") {
       return {
         id: "streaming",
@@ -401,6 +493,7 @@ export class AnthropicProvider implements ProviderAdapter {
       };
     }
 
+    // Default case for unhandled chunk types
     return {
       id: "streaming",
       delta: "",

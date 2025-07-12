@@ -1,4 +1,4 @@
-import { CohereClient } from "cohere-ai";
+import { CohereClientV2 } from "cohere-ai";
 import type {
   ProviderAdapter,
   CompletionRequest,
@@ -23,7 +23,7 @@ export class CohereProvider implements ProviderAdapter {
   readonly name = "cohere";
 
   /** Cohere SDK client instance */
-  private client: CohereClient;
+  private client: CohereClientV2;
 
   /**
    * Create a new Cohere provider instance
@@ -36,7 +36,7 @@ export class CohereProvider implements ProviderAdapter {
     /** Custom base URL (for proxies) */
     baseURL?: string;
   }) {
-    this.client = new CohereClient({
+    this.client = new CohereClientV2({
       token: config.apiKey,
       environment: config.baseURL,
     });
@@ -49,19 +49,15 @@ export class CohereProvider implements ProviderAdapter {
     request: CompletionRequest
   ): Promise<CompletionResponse> {
     try {
-      const { message, chatHistory, preamble } = this.convertMessages(
-        request.messages
-      );
+      const messages = this.convertMessages(request.messages);
 
       const cohereRequest: any = {
         model: request.model,
-        message,
-        chatHistory: chatHistory.length > 0 ? chatHistory : undefined,
-        preamble,
+        messages,
         temperature: request.temperature,
-        maxTokens: request.maxTokens,
+        max_tokens: request.maxTokens,
         stream: false,
-        stopSequences: Array.isArray(request.stop)
+        stop_sequences: Array.isArray(request.stop)
           ? request.stop
           : request.stop
             ? [request.stop]
@@ -87,19 +83,15 @@ export class CohereProvider implements ProviderAdapter {
     request: CompletionRequest
   ): AsyncIterable<CompletionChunk> {
     try {
-      const { message, chatHistory, preamble } = this.convertMessages(
-        request.messages
-      );
+      const messages = this.convertMessages(request.messages);
 
       const cohereRequest: any = {
         model: request.model,
-        message,
-        chatHistory: chatHistory.length > 0 ? chatHistory : undefined,
-        preamble,
+        messages,
         temperature: request.temperature,
-        maxTokens: request.maxTokens,
+        max_tokens: request.maxTokens,
         stream: true,
-        stopSequences: Array.isArray(request.stop)
+        stop_sequences: Array.isArray(request.stop)
           ? request.stop
           : request.stop
             ? [request.stop]
@@ -194,83 +186,54 @@ export class CohereProvider implements ProviderAdapter {
   }
 
   /**
-   * Convert unified messages to Cohere format
-   * Cohere expects the latest message separately from chat history
+   * Convert unified messages to Cohere v2 format
+   * Uses the standard messages array format
    */
-  private convertMessages(messages: Message[]): {
-    message: string;
-    chatHistory: any[];
-    preamble?: string;
-  } {
-    // Extract system message as preamble
-    const systemMessages = messages.filter((m) => m.role === "system");
-    const preamble =
-      systemMessages.length > 0
-        ? systemMessages.map((m) => m.content as string).join("\n")
-        : undefined;
-
-    // Filter out system messages and tool messages for chat history
-    const conversationMessages = messages.filter((m) => m.role !== "system");
-
-    if (conversationMessages.length === 0) {
-      throw new LLMError("At least one non-system message is required");
+  private convertMessages(messages: Message[]): any[] {
+    if (messages.length === 0) {
+      throw new LLMError("At least one message is required");
     }
 
-    // The last message should be from the user
-    const lastMessage = conversationMessages[conversationMessages.length - 1];
-    if (lastMessage.role !== "user") {
-      throw new LLMError("Last message must be from user");
-    }
-
-    const message = this.extractTextFromMessage(lastMessage);
-
-    // Convert previous messages to chat history
-    const chatHistory = conversationMessages.slice(0, -1).map((msg) => {
-      const text = this.extractTextFromMessage(msg);
-
-      if (msg.role === "user") {
+    return messages.map((msg) => {
+      if (msg.role === "system") {
         return {
-          role: "USER" as const,
-          message: text,
+          role: "system" as const,
+          content: this.extractTextFromMessage(msg),
+        };
+      } else if (msg.role === "user") {
+        return {
+          role: "user" as const,
+          content: this.extractTextFromMessage(msg),
         };
       } else if (msg.role === "assistant") {
-        const response: any = {
-          role: "CHATBOT" as const,
-          message: text,
+        const assistantMsg: any = {
+          role: "assistant" as const,
+          content: this.extractTextFromMessage(msg),
         };
 
         // Add tool calls if present
         if ((msg as any).toolCalls) {
-          response.toolCalls = (msg as any).toolCalls.map((call: ToolCall) => ({
-            name: call.name,
-            parameters: call.arguments,
+          assistantMsg.tool_calls = (msg as any).toolCalls.map((call: ToolCall) => ({
+            id: call.id,
+            type: "function",
+            function: {
+              name: call.name,
+              arguments: JSON.stringify(call.arguments),
+            },
           }));
         }
 
-        return response;
+        return assistantMsg;
       } else if (msg.role === "tool") {
         return {
-          role: "TOOL" as const,
-          toolResults: [
-            {
-              call: {
-                name: "tool_result",
-                parameters: {},
-              },
-              outputs: [
-                {
-                  text: text,
-                },
-              ],
-            },
-          ],
+          role: "tool" as const,
+          toolCallId: (msg as any).toolCallId || "unknown",
+          content: this.extractTextFromMessage(msg),
         };
       }
 
       throw new LLMError(`Unsupported message role: ${msg.role}`);
     });
-
-    return { message, chatHistory, preamble };
   }
 
   /**
@@ -296,90 +259,51 @@ export class CohereProvider implements ProviderAdapter {
   }
 
   /**
-   * Convert unified tool definitions to Cohere format
+   * Convert unified tool definitions to Cohere v2 format
    */
   private convertTools(tools: ToolDefinition[]): any[] {
     return tools.map((tool) => ({
-      name: tool.name,
-      description: tool.description,
-      parameterDefinitions: this.convertParameterDefinitions(
-        tool.parameters.properties
-      ),
+      type: "function",
+      function: {
+        name: tool.name,
+        description: tool.description,
+        parameters: tool.parameters,
+      },
     }));
   }
 
-  /**
-   * Convert JSON Schema properties to Cohere parameter definitions
-   */
-  private convertParameterDefinitions(
-    properties: Record<string, any>
-  ): Record<string, any> {
-    const definitions: Record<string, any> = {};
-
-    for (const [name, prop] of Object.entries(properties)) {
-      definitions[name] = {
-        description: prop.description || "",
-        type: this.mapJsonSchemaType(prop.type),
-        required: prop.required || false,
-      };
-    }
-
-    return definitions;
-  }
-
-  /**
-   * Map JSON Schema types to Cohere types
-   */
-  private mapJsonSchemaType(jsonType: string): string {
-    switch (jsonType) {
-      case "string":
-        return "str";
-      case "number":
-        return "float";
-      case "integer":
-        return "int";
-      case "boolean":
-        return "bool";
-      case "array":
-        return "list";
-      case "object":
-        return "dict";
-      default:
-        return "str";
-    }
-  }
 
   /**
    * Convert Cohere response to unified format
    */
   private convertResponse(response: any): CompletionResponse {
-    const text = response.text || "";
+    const text = response.message?.content || "";
 
     // Handle tool calls
     const toolCalls: ToolCall[] = [];
-    if (response.toolCalls && Array.isArray(response.toolCalls)) {
-      for (const [index, call] of response.toolCalls.entries()) {
+    if (response.message?.toolCalls && Array.isArray(response.message.toolCalls)) {
+      for (const call of response.message.toolCalls) {
         toolCalls.push({
-          id: `call_${Date.now()}_${index}`,
-          name: call.name,
-          arguments: call.parameters || {},
+          id: call.id,
+          name: call.function.name,
+          arguments: JSON.parse(call.function.arguments || "{}"),
         });
       }
     }
 
     // Extract usage information
     const usage: TokenUsage = {
-      promptTokens: response.meta?.billedUnits?.inputTokens || 0,
-      completionTokens: response.meta?.billedUnits?.outputTokens || 0,
+      promptTokens: response.usage?.billedUnits?.inputTokens || 0,
+      completionTokens: response.usage?.billedUnits?.outputTokens || 0,
       totalTokens:
-        (response.meta?.billedUnits?.inputTokens || 0) +
-        (response.meta?.billedUnits?.outputTokens || 0),
+        (response.usage?.billedUnits?.inputTokens || 0) +
+        (response.usage?.billedUnits?.outputTokens || 0),
     };
 
     return {
-      id: response.generationId || `cohere_${Date.now()}`,
+      id: response.id || `cohere_${Date.now()}`,
       content: text,
-      model: response.meta?.model || "unknown",
+      model: "unknown", // V2 API doesn't seem to include model in response
       usage,
       finishReason: this.convertFinishReason(response.finishReason),
       toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
@@ -390,37 +314,49 @@ export class CohereProvider implements ProviderAdapter {
    * Convert Cohere streaming chunk to unified format
    */
   private convertChunk(chunk: any): CompletionChunk {
-    // Handle different chunk types
-    if (chunk.eventType === "text-generation") {
+    // Handle CohereClientV2 streaming events
+    if (chunk.type === "content-delta") {
       return {
-        id: chunk.generationId || "streaming",
-        delta: chunk.text || "",
+        id: chunk.id || "streaming",
+        delta: chunk.delta?.message?.content?.text || "",
         finished: false,
       };
     }
 
-    if (chunk.eventType === "stream-end") {
-      const usage = chunk.response?.meta?.billedUnits
+    if (chunk.type === "message-end") {
+      const usage = chunk.delta?.usage?.billedUnits
         ? {
-          promptTokens: chunk.response.meta.billedUnits.inputTokens || 0,
-          completionTokens: chunk.response.meta.billedUnits.outputTokens || 0,
+          promptTokens: chunk.delta.usage.billedUnits.inputTokens || 0,
+          completionTokens: chunk.delta.usage.billedUnits.outputTokens || 0,
           totalTokens:
-            (chunk.response.meta.billedUnits.inputTokens || 0) +
-            (chunk.response.meta.billedUnits.outputTokens || 0),
+            (chunk.delta.usage.billedUnits.inputTokens || 0) +
+            (chunk.delta.usage.billedUnits.outputTokens || 0),
         }
         : undefined;
 
       return {
-        id: chunk.generationId || "streaming",
+        id: chunk.id || "streaming",
         delta: "",
         finished: true,
         usage,
       };
     }
 
-    if (chunk.eventType === "tool-calls-generation") {
+    // Handle other event types (message-start, content-start, content-end, citations)
+    if (chunk.type === "message-start" || chunk.type === "content-start" || 
+        chunk.type === "content-end" || chunk.type === "citation-start" || 
+        chunk.type === "citation-end") {
       return {
-        id: chunk.generationId || "streaming",
+        id: chunk.id || "streaming",
+        delta: "",
+        finished: false,
+      };
+    }
+
+    // Handle tool calls (if they come in streaming)
+    if (chunk.type === "tool-calls-generation") {
+      return {
+        id: chunk.id || "streaming",
         delta: "",
         finished: false,
         toolCalls: chunk.toolCalls?.map((call: any, index: number) => ({
@@ -433,7 +369,7 @@ export class CohereProvider implements ProviderAdapter {
 
     // Default chunk for other event types
     return {
-      id: chunk.generationId || "streaming",
+      id: chunk.id || "streaming",
       delta: "",
       finished: false,
     };

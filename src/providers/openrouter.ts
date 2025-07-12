@@ -253,6 +253,22 @@ export class OpenRouterProvider implements ProviderAdapter {
 
       // Handle simple text messages
       if (typeof msg.content === "string") {
+        // For assistant messages with tool calls, include tool_calls
+        if (msg.role === "assistant" && msg.toolCalls && msg.toolCalls.length > 0) {
+          return {
+            role: "assistant",
+            content: msg.content,
+            tool_calls: msg.toolCalls.map(toolCall => ({
+              id: toolCall.id,
+              type: "function" as const,
+              function: {
+                name: toolCall.name,
+                arguments: JSON.stringify(toolCall.arguments),
+              },
+            })),
+          };
+        }
+        
         return {
           role: msg.role as "system" | "user" | "assistant",
           content: msg.content,

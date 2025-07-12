@@ -1,32 +1,33 @@
 /**
- * --- 03. TOOL USAGE ---
+ * --- 03C. TOOL USAGE - MISTRAL ---
  *
- * This example demonstrates how to use tools with Anthropic's Claude models.
+ * This example demonstrates how to use tools with Mistral AI models.
  * Tools allow you to extend the capabilities of the model by letting it
  * call external functions.
  *
  * It covers:
  * 1.  Defining a tool with a name, description, and parameters.
- * 2.  Sending a completion request with the defined tool to Claude model.
+ * 2.  Sending a completion request with the defined tool to Mistral model.
  * 3.  Handling the model's response, which may include a tool call.
  * 4.  Completing the tool call workflow by executing the tool and sending results back
  *
  * To run this example, you need to have your API keys set as environment variables:
  *
- * export ANTHROPIC_API_KEY="your-anthropic-api-key"
+ * export MISTRAL_API_KEY="your-mistral-api-key"
  * export EXA_API_KEY="your-exa-api-key"
  *
+ * Get your Mistral API key from: https://console.mistral.ai/
  * Get your Exa API key from: https://exa.ai/
  *
  * You can also control the response mode:
- * export USE_STREAMING="false"  # Use non-streaming mode (default: streaming)
+ * export USE_STREAMING="true"  # Use streaming mode (default: non-streaming)
  *
  * Then, you can run this file using bun:
  *
- * bun run examples/03-tool-usage.ts
+ * bun run examples/03c-tool-usage-mistral.ts
  */
 
-import { ModelManager, AnthropicProvider, ToolDefinition, ToolCall, Message } from "../src/index";
+import { ModelManager, MistralProvider, ToolDefinition, ToolCall, Message } from "../src/index";
 import Exa from "exa-js";
 
 // Real implementation of the exa_search tool
@@ -66,10 +67,11 @@ async function executeExaSearch(query: string): Promise<string> {
 }
 
 async function main() {
-    console.log("--- 03. TOOL USAGE ---");
+    console.log("--- 03C. TOOL USAGE - MISTRAL ---");
 
-    if (!process.env.ANTHROPIC_API_KEY) {
-        console.error("❌ ANTHROPIC_API_KEY environment variable is not set.");
+    if (!process.env.MISTRAL_API_KEY) {
+        console.error("❌ MISTRAL_API_KEY environment variable is not set.");
+        console.error("Get your API key from: https://console.mistral.ai/");
         return;
     }
 
@@ -80,10 +82,10 @@ async function main() {
     }
 
     const modelManager = new ModelManager();
-    const anthropic = new AnthropicProvider({
-        apiKey: process.env.ANTHROPIC_API_KEY,
+    const mistral = new MistralProvider({
+        apiKey: process.env.MISTRAL_API_KEY,
     });
-    modelManager.addProvider(anthropic);
+    modelManager.addProvider(mistral);
 
     // 1. Define the tool
     // The tool definition tells the model what function is available,
@@ -108,7 +110,7 @@ async function main() {
         // We include the tool definition in the `tools` array.
         console.log("\n🤖 Asking the model to use the search tool...");
         const initialRequest = {
-            model: "claude-3-5-sonnet-20240620",
+            model: "mistral-large-2407",
             messages: [
                 {
                     role: "user" as const,
@@ -120,7 +122,7 @@ async function main() {
         };
 
         // 3. Get the initial completion (non-streaming to handle tool calls properly)
-        const initialResponse = await anthropic.generateCompletion(initialRequest);
+        const initialResponse = await mistral.generateCompletion(initialRequest);
         
         // Display the assistant's response
         process.stdout.write(initialResponse.content);
@@ -153,7 +155,7 @@ async function main() {
             },
             {
                 role: "assistant",
-                content: initialResponse.content,
+                content: "", // Mistral expects empty content when there are tool calls
                 toolCalls: initialResponse.toolCalls,
             },
         ];
@@ -171,6 +173,7 @@ async function main() {
                 messagesWithToolResults.push({
                     role: "tool",
                     content: result,
+                    name: toolCall.name,
                     toolCallId: toolCall.id,
                 });
             }
@@ -178,18 +181,21 @@ async function main() {
 
         // 5. Send follow-up request with tool results
         console.log("\n🤖 Getting final response from model...");
+        
         const followUpRequest = {
-            model: "claude-3-5-sonnet-20240620",
+            model: "mistral-large-2407", // Use same model as initial request
             messages: messagesWithToolResults,
-            tools: [exaSearchTool],
+            // Explicitly ensure no tools are sent in follow-up
+            tools: undefined,
+            toolChoice: undefined,
         };
 
         // Support both streaming and non-streaming modes
-        const useStreaming = process.env.USE_STREAMING !== "false";
+        const useStreaming = process.env.USE_STREAMING === "true";
         
         if (useStreaming) {
             console.log("📡 Using streaming mode...");
-            for await (const chunk of anthropic.streamCompletion(followUpRequest)) {
+            for await (const chunk of mistral.streamCompletion(followUpRequest)) {
                 if (chunk.delta) {
                     process.stdout.write(chunk.delta);
                 }
@@ -204,7 +210,7 @@ async function main() {
             }
         } else {
             console.log("⚡ Using non-streaming mode...");
-            const finalResponse = await anthropic.generateCompletion(followUpRequest);
+            const finalResponse = await mistral.generateCompletion(followUpRequest);
             console.log(finalResponse.content);
             console.log("\n---\n✅ Complete workflow finished!");
             if (finalResponse.usage) {
@@ -223,4 +229,4 @@ async function main() {
 
 if (import.meta.main) {
     main();
-}
+} 

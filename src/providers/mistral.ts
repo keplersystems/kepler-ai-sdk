@@ -68,6 +68,8 @@ export class MistralProvider implements ProviderAdapter {
       if (request.tools && request.tools.length > 0) {
         requestBody.tools = this.convertTools(request.tools);
         requestBody.toolChoice = this.convertToolChoice(request.toolChoice);
+        // Explicitly set parallel_tool_calls to false for simpler conversation flow
+        requestBody.parallel_tool_calls = false;
       }
 
       // Add response format if specified
@@ -109,6 +111,8 @@ export class MistralProvider implements ProviderAdapter {
       if (request.tools && request.tools.length > 0) {
         requestBody.tools = this.convertTools(request.tools);
         requestBody.toolChoice = this.convertToolChoice(request.toolChoice);
+        // Explicitly set parallel_tool_calls to false for simpler conversation flow
+        requestBody.parallel_tool_calls = false;
       }
 
       const stream = await this.client.chat.stream(requestBody);
@@ -187,7 +191,7 @@ export class MistralProvider implements ProviderAdapter {
    * Convert unified messages to Mistral format
    */
   private convertMessages(messages: Message[]): any[] {
-    return messages.map((message) => {
+    return messages.map((message, index) => {
       const converted: any = {
         role: message.role,
         content:
@@ -196,12 +200,53 @@ export class MistralProvider implements ProviderAdapter {
             : this.convertContentParts(message.content),
       };
 
-      if (message.name) {
+      // For assistant messages with tool calls, add toolCalls and set empty content
+      if (message.role === "assistant" && message.toolCalls && message.toolCalls.length > 0) {
+        converted.content = ""; // Mistral expects empty content when there are tool calls
+        converted.toolCalls = message.toolCalls.map(toolCall => ({
+          id: toolCall.id,
+          type: "function",
+          function: {
+            name: toolCall.name,
+            arguments: JSON.stringify(toolCall.arguments),
+          },
+        }));
+      }
+
+      // For tool messages, ensure we have the required name field
+      if (message.role === "tool") {
+        // Extract tool name from the tool call ID or find it from previous assistant message
+        if (!message.name && (message as any).toolCallId) {
+          // Find the corresponding tool call in previous messages to get the tool name
+          for (let i = index - 1; i >= 0; i--) {
+            const prevMessage = messages[i];
+            if (prevMessage.role === "assistant" && prevMessage.toolCalls) {
+              const matchingCall = prevMessage.toolCalls.find(
+                call => call.id === (message as any).toolCallId
+              );
+              if (matchingCall) {
+                converted.name = matchingCall.name;
+                break;
+              }
+            }
+          }
+        } else if (message.name) {
+          converted.name = message.name;
+        }
+        
+        // Ensure toolCallId is set
+        if ((message as any).toolCallId) {
+          converted.toolCallId = (message as any).toolCallId;
+        }
+      }
+
+      // Handle legacy name and toolCallId fields for other message types
+      if (message.name && message.role !== "tool") {
         converted.name = message.name;
       }
 
-      if (message.toolCallId) {
-        converted.tool_call_id = message.toolCallId;
+      if (message.toolCallId && message.role !== "tool") {
+        converted.toolCallId = message.toolCallId;
       }
 
       return converted;

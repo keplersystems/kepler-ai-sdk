@@ -14,6 +14,9 @@ export interface Message {
 
     /** ID of the tool call this message is responding to (for tool messages) */
     toolCallId?: string;
+
+    /** Tool calls made by the assistant (for assistant messages) */
+    toolCalls?: ToolCall[];
 }
 
 /**
