@@ -69,7 +69,7 @@ export class GeminiProvider implements ProviderAdapter {
       });
     } else {
       throw new LLMError(
-        "Either apiKey or vertexAI configuration must be provided"
+        "Either apiKey or vertexAI configuration must be provided",
       );
     }
   }
@@ -78,11 +78,11 @@ export class GeminiProvider implements ProviderAdapter {
    * Generate a completion using Gemini's generateContent API
    */
   async generateCompletion(
-    request: CompletionRequest
+    request: CompletionRequest,
   ): Promise<CompletionResponse> {
     try {
       const { contents, systemInstruction } = this.convertMessages(
-        request.messages
+        request.messages,
       );
 
       const requestConfig: any = {
@@ -111,14 +111,18 @@ export class GeminiProvider implements ProviderAdapter {
         ];
 
         // Configure tool choice - always set when tools are provided
-        requestConfig.config.toolConfig = this.convertToolChoice(request.toolChoice);
+        requestConfig.config.toolConfig = this.convertToolChoice(
+          request.toolChoice,
+        );
       }
 
       // Add response format if specified
       if (request.responseFormat?.type === "json_object") {
-        requestConfig.config.generationConfig.responseMimeType = "application/json";
+        requestConfig.config.generationConfig.responseMimeType =
+          "application/json";
       } else if (request.responseFormat?.type === "json_schema") {
-        requestConfig.config.generationConfig.responseMimeType = "application/json";
+        requestConfig.config.generationConfig.responseMimeType =
+          "application/json";
         requestConfig.config.generationConfig.responseSchema =
           request.responseFormat.jsonSchema;
       }
@@ -135,11 +139,11 @@ export class GeminiProvider implements ProviderAdapter {
    * Generate a streaming completion using Gemini's streaming API
    */
   async *streamCompletion(
-    request: CompletionRequest
+    request: CompletionRequest,
   ): AsyncIterable<CompletionChunk> {
     try {
       const { contents, systemInstruction } = this.convertMessages(
-        request.messages
+        request.messages,
       );
 
       const requestConfig: any = {
@@ -168,12 +172,13 @@ export class GeminiProvider implements ProviderAdapter {
         ];
 
         // Configure tool choice - always set when tools are provided
-        requestConfig.config.toolConfig = this.convertToolChoice(request.toolChoice);
+        requestConfig.config.toolConfig = this.convertToolChoice(
+          request.toolChoice,
+        );
       }
 
-      const stream = await this.client.models.generateContentStream(
-        requestConfig
-      );
+      const stream =
+        await this.client.models.generateContentStream(requestConfig);
 
       for await (const chunk of stream) {
         yield this.convertChunk(chunk);
@@ -191,10 +196,11 @@ export class GeminiProvider implements ProviderAdapter {
       return await litellmModelManager.getModelsByProvider("gemini");
     } catch (error) {
       throw new LLMError(
-        `Failed to fetch Gemini models from LiteLLM: ${error instanceof Error ? error.message : "Unknown error"
+        `Failed to fetch Gemini models from LiteLLM: ${
+          error instanceof Error ? error.message : "Unknown error"
         }`,
         error instanceof Error ? error : undefined,
-        { provider: "gemini" }
+        { provider: "gemini" },
       );
     }
   }
@@ -207,10 +213,11 @@ export class GeminiProvider implements ProviderAdapter {
       return await litellmModelManager.getModelInfo(modelId, "gemini");
     } catch (error) {
       throw new LLMError(
-        `Failed to get Gemini model '${modelId}' from LiteLLM: ${error instanceof Error ? error.message : "Unknown error"
+        `Failed to get Gemini model '${modelId}' from LiteLLM: ${
+          error instanceof Error ? error.message : "Unknown error"
         }`,
         error instanceof Error ? error : undefined,
-        { provider: "gemini" }
+        { provider: "gemini" },
       );
     }
   }
@@ -269,13 +276,14 @@ export class GeminiProvider implements ProviderAdapter {
       const audioModel = request.model || "gemini-2.5-pro-preview-tts";
 
       const config = {
-        temperature: 0.8,
-        responseModalities: ["audio"],
+        responseModalities: ["AUDIO"],
+        generationConfig: {
+          temperature: 0.8,
+        },
         speechConfig: {
           voiceConfig: {
             prebuiltVoiceConfig: {
-              voiceName:
-                this.convertVoiceToGeminiVoice(request.voice) || "Zephyr",
+              voiceName: request.voice || "zephyr",
             },
           },
         },
@@ -294,8 +302,8 @@ export class GeminiProvider implements ProviderAdapter {
 
       const response = await this.client.models.generateContentStream({
         model: audioModel,
-        config,
         contents,
+        config,
       });
 
       // Collect audio chunks
@@ -329,7 +337,7 @@ export class GeminiProvider implements ProviderAdapter {
       // Convert Buffer to ArrayBuffer
       const arrayBuffer = combinedAudio.buffer.slice(
         combinedAudio.byteOffset,
-        combinedAudio.byteOffset + combinedAudio.byteLength
+        combinedAudio.byteOffset + combinedAudio.byteLength,
       ) as ArrayBuffer;
 
       return { audio: arrayBuffer };
@@ -343,7 +351,7 @@ export class GeminiProvider implements ProviderAdapter {
    * Uses text-embedding-004 or other Gemini embedding models
    */
   async generateEmbedding(
-    request: EmbeddingRequest
+    request: EmbeddingRequest,
   ): Promise<EmbeddingResponse> {
     try {
       // Use Gemini embedding model
@@ -377,13 +385,13 @@ export class GeminiProvider implements ProviderAdapter {
             throw new LLMError(
               `No embedding values returned for text: ${text.substring(
                 0,
-                50
-              )}...`
+                50,
+              )}...`,
             );
           }
         } else {
           throw new LLMError(
-            `Failed to generate embedding for text: ${text.substring(0, 50)}...`
+            `Failed to generate embedding for text: ${text.substring(0, 50)}...`,
           );
         }
       }
@@ -436,16 +444,20 @@ export class GeminiProvider implements ProviderAdapter {
       // Handle simple text messages
       if (typeof msg.content === "string") {
         // For assistant messages with tool calls, include function calls
-        if (msg.role === "assistant" && msg.toolCalls && msg.toolCalls.length > 0) {
+        if (
+          msg.role === "assistant" &&
+          msg.toolCalls &&
+          msg.toolCalls.length > 0
+        ) {
           const parts: any[] = [];
-          
+
           // Add text content if present
           if (msg.content) {
             parts.push({ text: msg.content });
           }
-          
+
           // Add function calls
-          msg.toolCalls.forEach(toolCall => {
+          msg.toolCalls.forEach((toolCall) => {
             parts.push({
               functionCall: {
                 name: toolCall.name,
@@ -453,13 +465,13 @@ export class GeminiProvider implements ProviderAdapter {
               },
             });
           });
-          
+
           return {
             role: "model",
             parts,
           };
         }
-        
+
         return {
           role: msg.role === "assistant" ? "model" : "user",
           parts: [{ text: msg.content }],
@@ -506,7 +518,7 @@ export class GeminiProvider implements ProviderAdapter {
             };
           default:
             throw new LLMError(
-              `Gemini does not support content type: ${part.type}`
+              `Gemini does not support content type: ${part.type}`,
             );
         }
       });
@@ -563,7 +575,7 @@ export class GeminiProvider implements ProviderAdapter {
     if (!candidate) {
       throw new LLMError("No candidate found in Gemini response");
     }
-    
+
     const content = candidate.content;
     if (!content || !content.parts) {
       throw new LLMError("Invalid content structure in Gemini response");
@@ -652,12 +664,12 @@ export class GeminiProvider implements ProviderAdapter {
 
     const usage = chunk.usageMetadata
       ? {
-        promptTokens: chunk.usageMetadata.promptTokenCount || 0,
-        completionTokens: chunk.usageMetadata.candidatesTokenCount || 0,
-        totalTokens: chunk.usageMetadata.totalTokenCount || 0,
-        cachedTokens:
-          chunk.usageMetadata.cachedContentTokenCount || undefined,
-      }
+          promptTokens: chunk.usageMetadata.promptTokenCount || 0,
+          completionTokens: chunk.usageMetadata.candidatesTokenCount || 0,
+          totalTokens: chunk.usageMetadata.totalTokenCount || 0,
+          cachedTokens:
+            chunk.usageMetadata.cachedContentTokenCount || undefined,
+        }
       : undefined;
 
     return {
@@ -673,7 +685,7 @@ export class GeminiProvider implements ProviderAdapter {
    * Convert Gemini finish reason to unified format
    */
   private convertFinishReason(
-    reason: string | undefined
+    reason: string | undefined,
   ): CompletionResponse["finishReason"] {
     switch (reason) {
       case "STOP":
@@ -710,29 +722,6 @@ export class GeminiProvider implements ProviderAdapter {
     return `${ratioWidth}:${ratioHeight}`;
   }
 
-  /**
-   * Convert standard voice names to Gemini voice names
-   */
-  private convertVoiceToGeminiVoice(voice?: string): string | undefined {
-    if (!voice) return undefined;
-
-    // Map common voice names to Gemini voices
-    const voiceMap: Record<string, string> = {
-      alloy: "Zephyr",
-      echo: "Puck",
-      fable: "Sage",
-      onyx: "Sterling",
-      nova: "Luna",
-      shimmer: "Coral",
-      // Standard voices
-      "en-US-Standard-A": "Zephyr",
-      "en-US-Standard-B": "Puck",
-      "en-US-Standard-C": "Sage",
-      "en-US-Standard-D": "Sterling",
-    };
-
-    return voiceMap[voice] || "Zephyr";
-  }
 
   /**
    * Convert raw audio data to WAV format
@@ -781,7 +770,7 @@ export class GeminiProvider implements ProviderAdapter {
    */
   private createWavHeader(
     dataLength: number,
-    options: WavConversionOptions
+    options: WavConversionOptions,
   ): Buffer {
     const { numChannels, sampleRate, bitsPerSample } = options;
 
@@ -907,7 +896,7 @@ export class GeminiProvider implements ProviderAdapter {
           provider: "gemini",
           statusCode: errorObj.status || errorObj.code,
           type: errorObj.name || "GEMINI_ERROR",
-        }
+        },
       );
     }
 

@@ -270,6 +270,15 @@ export class OpenAIProvider implements ProviderAdapter {
                 type: "image_url",
                 image_url: { url: part.imageUrl! },
               };
+            case "audio":
+              const audioFormat = this.extractAudioFormat(part.mimeType);
+              return {
+                type: "input_audio" as any,
+                input_audio: {
+                  data: part.audioUrl!,
+                  format: audioFormat,
+                },
+              };
             default:
               throw new LLMError(
                 `OpenAI does not support content type: ${part.type}`
@@ -283,6 +292,20 @@ export class OpenAIProvider implements ProviderAdapter {
         content,
       };
     });
+  }
+
+  /**
+   * Extract audio format from MIME type for OpenRouter
+   */
+  private extractAudioFormat(mimeType?: string): "wav" | "mp3" {
+    if (!mimeType) return "wav"; // Default format
+
+    const format = mimeType.toLowerCase();
+    if (format.includes("wav")) return "wav";
+    if (format.includes("mp3")) return "mp3";
+    
+    // Default to wav for unknown formats
+    return "wav";
   }
 
   /**
@@ -368,6 +391,7 @@ export class OpenAIProvider implements ProviderAdapter {
   ): CompletionChunk {
     const choice = chunk.choices[0];
     const delta = choice?.delta;
+    
 
     // Convert OpenAI tool call deltas to our format
     const toolCallDeltas = delta?.tool_calls?.map((toolCall) => ({
@@ -388,7 +412,7 @@ export class OpenAIProvider implements ProviderAdapter {
           totalTokens: chunk.usage.total_tokens || 0,
         }
         : undefined,
-      toolCallDeltas: toolCallDeltas,
+      toolCallDeltas: toolCallDeltas && toolCallDeltas.length > 0 ? toolCallDeltas : undefined,
     };
   }
 
