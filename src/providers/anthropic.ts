@@ -326,6 +326,16 @@ export class AnthropicProvider implements ProviderAdapter {
                 data: part.imageUrl!.replace(/^data:image\/[^;]+;base64,/, ""),
               },
             };
+          case "image_url":
+            const imageUrl = (part as any).image_url.url;
+            return {
+              type: "image",
+              source: {
+                type: "base64",
+                media_type: "image/jpeg", // Default, could be improved to detect type from URL
+                data: imageUrl.replace(/^data:image\/[^;]+;base64,/, ""),
+              },
+            };
           case "document":
             throw new LLMError(
               "Documents are not supported in this format for Anthropic"

@@ -81,7 +81,7 @@ export class GeminiProvider implements ProviderAdapter {
     request: CompletionRequest,
   ): Promise<CompletionResponse> {
     try {
-      const { contents, systemInstruction } = this.convertMessages(
+      const { contents, systemInstruction } = await this.convertMessages(
         request.messages,
       );
 
@@ -142,7 +142,7 @@ export class GeminiProvider implements ProviderAdapter {
     request: CompletionRequest,
   ): AsyncIterable<CompletionChunk> {
     try {
-      const { contents, systemInstruction } = this.convertMessages(
+      const { contents, systemInstruction } = await this.convertMessages(
         request.messages,
       );
 
@@ -412,10 +412,10 @@ export class GeminiProvider implements ProviderAdapter {
   /**
    * Convert unified messages to Gemini format
    */
-  private convertMessages(messages: Message[]): {
+  private async convertMessages(messages: Message[]): Promise<{
     contents: any[];
     systemInstruction?: string;
-  } {
+  }> {
     const systemMessages = messages.filter((m) => m.role === "system");
     const nonSystemMessages = messages.filter((m) => m.role !== "system");
 
@@ -425,7 +425,7 @@ export class GeminiProvider implements ProviderAdapter {
         ? systemMessages.map((m) => m.content as string).join("\n")
         : undefined;
 
-    const contents = nonSystemMessages.map((msg) => {
+    const contents = await Promise.all(nonSystemMessages.map(async (msg) => {
       // Handle tool result messages
       if (msg.role === "tool") {
         return {
@@ -479,7 +479,7 @@ export class GeminiProvider implements ProviderAdapter {
       }
 
       // Handle multimodal content with comprehensive MIME type support
-      const parts = msg.content.map((part) => {
+      const parts = await Promise.all(msg.content.map(async (part) => {
         switch (part.type) {
           case "text":
             return { text: part.text! };
@@ -488,7 +488,16 @@ export class GeminiProvider implements ProviderAdapter {
               inlineData: {
                 mimeType:
                   this.validateImageMimeType(part.mimeType) || "image/jpeg",
-                data: part.imageUrl,
+                data: await this.processFileData(part.imageUrl!),
+              },
+            };
+          case "image_url":
+            // Convert OpenAI-compatible format to Gemini format
+            const imageUrl = (part as any).image_url.url;
+            return {
+              inlineData: {
+                mimeType: "image/jpeg", // Default, could be improved to detect from URL
+                data: await this.processFileData(imageUrl),
               },
             };
           case "video":
@@ -496,7 +505,7 @@ export class GeminiProvider implements ProviderAdapter {
               inlineData: {
                 mimeType:
                   this.validateVideoMimeType(part.mimeType) || "video/mp4",
-                data: part.videoUrl,
+                data: await this.processFileData(part.videoUrl!),
               },
             };
           case "audio":
@@ -504,7 +513,7 @@ export class GeminiProvider implements ProviderAdapter {
               inlineData: {
                 mimeType:
                   this.validateAudioMimeType(part.mimeType) || "audio/mpeg",
-                data: part.audioUrl,
+                data: await this.processFileData(part.audioUrl!),
               },
             };
           case "document":
@@ -513,7 +522,7 @@ export class GeminiProvider implements ProviderAdapter {
                 mimeType:
                   this.validateDocumentMimeType(part.mimeType) ||
                   "application/pdf",
-                data: part.documentUrl,
+                data: await this.processFileData(part.documentUrl!),
               },
             };
           default:
@@ -521,13 +530,13 @@ export class GeminiProvider implements ProviderAdapter {
               `Gemini does not support content type: ${part.type}`,
             );
         }
-      });
+      }));
 
       return {
         role: msg.role === "assistant" ? "model" : "user",
         parts,
       };
-    });
+    }));
 
     return { contents, systemInstruction };
   }
@@ -905,5 +914,45 @@ export class GeminiProvider implements ProviderAdapter {
     }
 
     throw new LLMError(`Gemini ${operation} failed with unknown error`);
+  }
+
+  /**
+   * Process file data - convert URL to base64 or extract base64 from data URI
+   */
+  private async processFileData(fileData: string): Promise<string> {
+    // If it's already base64 data (with or without data URI prefix), extract and return it
+    if (fileData.startsWith('data:')) {
+      // Extract base64 data from data URI (e.g., "data:image/jpeg;base64,/9j/4AAQ...")
+      return fileData.split(',')[1];
+    }
+    
+    // If it looks like base64 data without prefix, return as-is
+    if (!fileData.startsWith('http')) {
+      return fileData;
+    }
+
+    // If it's an HTTP URL, fetch and convert to base64
+    try {
+      const response = await fetch(fileData);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`);
+      }
+      
+      const buffer = await response.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      
+      // Convert to base64
+      let binary = '';
+      for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      
+      return btoa(binary);
+    } catch (error) {
+      throw new LLMError(
+        `Failed to process file data: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error instanceof Error ? error : undefined
+      );
+    }
   }
 }

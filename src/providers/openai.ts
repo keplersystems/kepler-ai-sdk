@@ -270,6 +270,12 @@ export class OpenAIProvider implements ProviderAdapter {
                 type: "image_url",
                 image_url: { url: part.imageUrl! },
               };
+            case "image_url":
+              // Pass through OpenAI-compatible format directly
+              return {
+                type: "image_url",
+                image_url: (part as any).image_url,
+              };
             case "audio":
               const audioFormat = this.extractAudioFormat(part.mimeType);
               return {

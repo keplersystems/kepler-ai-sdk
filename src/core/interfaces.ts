@@ -25,7 +25,7 @@ export interface Message {
  */
 export interface ContentPart {
     /** Type of content */
-    type: 'text' | 'image' | 'video' | 'audio' | 'document';
+    type: 'text' | 'image_url' | 'video' | 'audio' | 'document';
 
     /** Text content (for text type) */
     text?: string;

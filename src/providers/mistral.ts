@@ -269,6 +269,12 @@ export class MistralProvider implements ProviderAdapter {
             imageUrl: part.imageUrl,
             type: "image_url",
           };
+        case "image_url":
+          // Pass through OpenAI-compatible format, adapting to Mistral's structure
+          return {
+            imageUrl: (part as any).image_url.url,
+            type: "image_url",
+          };
         default:
           return {
             type: "text",

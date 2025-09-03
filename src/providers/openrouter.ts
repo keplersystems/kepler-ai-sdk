@@ -294,6 +294,12 @@ export class OpenRouterProvider implements ProviderAdapter {
                 type: "image_url",
                 image_url: { url: part.imageUrl! },
               };
+            case "image_url":
+              // Pass through OpenAI-compatible format directly
+              return {
+                type: "image_url",
+                image_url: (part as any).image_url,
+              };
             default:
               throw new LLMError(
                 `OpenRouter does not support content type: ${part.type}`

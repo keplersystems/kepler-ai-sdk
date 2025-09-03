@@ -233,6 +233,12 @@ export class GitHubCopilotProvider implements ProviderAdapter {
                 type: "image_url",
                 image_url: { url: part.imageUrl! },
               };
+            case "image_url":
+              // Pass through OpenAI-compatible format directly
+              return {
+                type: "image_url",
+                image_url: (part as any).image_url,
+              };
             case "document":
               throw new LLMError("Documents are not supported by GitHub Copilot");
             default:
