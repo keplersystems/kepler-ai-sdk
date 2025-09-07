@@ -23,6 +23,20 @@ export type {
   ProviderAdapter,
 } from "./core/interfaces";
 
+// MCP (Model Context Protocol) interfaces and classes
+export type {
+  MCPServerConfig,
+  MCPContext,
+  MCPResource,
+  MCPPrompt,
+  MCPPromptArgument,
+  MCPTool,
+  MCPServerStatus,
+} from "./mcp/interfaces";
+
+export { MCPClient } from "./mcp/client";
+export { MCPManager } from "./mcp/MCPManager";
+
 // Essential OAuth interfaces (apps implement TokenStorage themselves)
 export type {
   OAuthToken,
@@ -45,6 +59,10 @@ export { CohereProvider } from "./providers/cohere";
 export { MistralProvider } from "./providers/mistral";
 export { OpenRouterProvider } from "./providers/openrouter";
 export { GitHubCopilotProvider } from "./providers/github-copilot";
+
+// Main Kepler class with MCP integration
+export { Kepler } from "./Kepler";
+export type { KeplerConfig, ToolHandler } from "./Kepler";
 
 // Model management
 export { ModelManager } from "./models/ModelManager";
