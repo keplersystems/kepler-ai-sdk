@@ -14,6 +14,7 @@ import { LLMError } from "../errors/LLMError";
 import { litellmModelManager } from "../utils/litellm-models";
 import { OAuthConfig } from "../core/oauth";
 import { OAuth } from "../auth/oauth";
+import { processImageUrl } from "../utils/image-processor";
 
 /**
  * Provider adapter for GitHub Copilot's API
@@ -228,17 +229,20 @@ export class GitHubCopilotProvider implements ProviderAdapter {
           switch (part.type) {
             case "text":
               return { type: "text", text: part.text! };
-            case "image":
-              return {
-                type: "image_url",
-                image_url: { url: part.imageUrl! },
-              };
-            case "image_url":
-              // Pass through OpenAI-compatible format directly
-              return {
-                type: "image_url",
-                image_url: (part as any).image_url,
-              };
+            case "image_url": {
+              const processed = processImageUrl(part.imageUrl!);
+              if (processed.isBase64 && processed.mimeType) {
+                return {
+                  type: "image_url",
+                  image_url: { url: `data:${processed.mimeType};base64,${processed.data}` },
+                };
+              } else {
+                return {
+                  type: "image_url",
+                  image_url: { url: processed.data },
+                };
+              }
+            }
             case "document":
               throw new LLMError("Documents are not supported by GitHub Copilot");
             default:

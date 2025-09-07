@@ -36,7 +36,7 @@ export class LLMError extends Error {
             statusCode?: number;
             type?: string;
             code?: string;
-        }
+        } & Record<string, unknown>
     ) {
         super(message);
         this.name = 'LLMError';

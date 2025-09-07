@@ -14,6 +14,7 @@ import type {
 } from "../core/interfaces";
 import { LLMError } from "../errors/LLMError";
 import { litellmModelManager } from "../utils/litellm-models";
+import { processImageUrl } from "../utils/image-processor";
 
 /**
  * Provider adapter for Mistral AI's API
@@ -46,7 +47,7 @@ export class MistralProvider implements ProviderAdapter {
    * Generate a completion using Mistral's chat completions API
    */
   async generateCompletion(
-    request: CompletionRequest
+    request: CompletionRequest,
   ): Promise<CompletionResponse> {
     try {
       const messages = this.convertMessages(request.messages);
@@ -89,7 +90,7 @@ export class MistralProvider implements ProviderAdapter {
    * Generate a streaming completion using Mistral's streaming API
    */
   async *streamCompletion(
-    request: CompletionRequest
+    request: CompletionRequest,
   ): AsyncIterable<CompletionChunk> {
     try {
       const messages = this.convertMessages(request.messages);
@@ -149,10 +150,11 @@ export class MistralProvider implements ProviderAdapter {
       return await litellmModelManager.getModelInfo(modelId, "mistral");
     } catch (error) {
       throw new LLMError(
-        `Failed to get Mistral model '${modelId}' from LiteLLM: ${error instanceof Error ? error.message : "Unknown error"
+        `Failed to get Mistral model '${modelId}' from LiteLLM: ${
+          error instanceof Error ? error.message : "Unknown error"
         }`,
         error instanceof Error ? error : undefined,
-        { provider: "mistral" }
+        { provider: "mistral" },
       );
     }
   }
@@ -161,7 +163,7 @@ export class MistralProvider implements ProviderAdapter {
    * Generate embeddings using Mistral's embeddings API
    */
   async generateEmbedding(
-    request: EmbeddingRequest
+    request: EmbeddingRequest,
   ): Promise<EmbeddingResponse> {
     try {
       const inputs = Array.isArray(request.input)
@@ -201,9 +203,13 @@ export class MistralProvider implements ProviderAdapter {
       };
 
       // For assistant messages with tool calls, add toolCalls and set empty content
-      if (message.role === "assistant" && message.toolCalls && message.toolCalls.length > 0) {
+      if (
+        message.role === "assistant" &&
+        message.toolCalls &&
+        message.toolCalls.length > 0
+      ) {
         converted.content = ""; // Mistral expects empty content when there are tool calls
-        converted.toolCalls = message.toolCalls.map(toolCall => ({
+        converted.toolCalls = message.toolCalls.map((toolCall) => ({
           id: toolCall.id,
           type: "function",
           function: {
@@ -222,7 +228,7 @@ export class MistralProvider implements ProviderAdapter {
             const prevMessage = messages[i];
             if (prevMessage.role === "assistant" && prevMessage.toolCalls) {
               const matchingCall = prevMessage.toolCalls.find(
-                call => call.id === (message as any).toolCallId
+                (call) => call.id === (message as any).toolCallId,
               );
               if (matchingCall) {
                 converted.name = matchingCall.name;
@@ -233,7 +239,7 @@ export class MistralProvider implements ProviderAdapter {
         } else if (message.name) {
           converted.name = message.name;
         }
-        
+
         // Ensure toolCallId is set
         if ((message as any).toolCallId) {
           converted.toolCallId = (message as any).toolCallId;
@@ -264,17 +270,20 @@ export class MistralProvider implements ProviderAdapter {
             type: "text",
             text: part.text,
           };
-        case "image":
-          return {
-            imageUrl: part.imageUrl,
-            type: "image_url",
-          };
-        case "image_url":
-          // Pass through OpenAI-compatible format, adapting to Mistral's structure
-          return {
-            imageUrl: (part as any).image_url.url,
-            type: "image_url",
-          };
+        case "image_url": {
+          const processed = processImageUrl(part.imageUrl!);
+          if (processed.isBase64 && processed.mimeType) {
+            return {
+              imageUrl: `data:${processed.mimeType};base64,${processed.data}`,
+              type: "image_url",
+            };
+          } else {
+            return {
+              imageUrl: processed.data,
+              type: "image_url",
+            };
+          }
+        }
         default:
           return {
             type: "text",
@@ -408,7 +417,7 @@ export class MistralProvider implements ProviderAdapter {
    * Convert Mistral finish reason to unified format
    */
   private convertFinishReason(
-    reason: string | null
+    reason: string | null,
   ): CompletionResponse["finishReason"] {
     switch (reason) {
       case "stop":
@@ -437,14 +446,14 @@ export class MistralProvider implements ProviderAdapter {
           provider: "mistral",
           statusCode: errorObj.status || errorObj.statusCode,
           type: errorObj.name || "MISTRAL_ERROR",
-        }
+        },
       );
     }
 
     if (error instanceof Error) {
       throw new LLMError(
         `Mistral ${operation} failed: ${error.message}`,
-        error
+        error,
       );
     }
 

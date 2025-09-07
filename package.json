@@ -20,6 +20,8 @@
     "gemini",
     "mistral",
     "cohere",
+    "mcp",
+    "model-context-protocol",
     "typescript",
     "sdk"
   ],
@@ -36,6 +38,7 @@
     "@anthropic-ai/sdk": "^0.55.0",
     "@google/genai": "^1.7.0",
     "@mistralai/mistralai": "^1.7.2",
+    "@modelcontextprotocol/sdk": "^1.17.5",
     "cohere-ai": "^7.17.1",
     "exa-js": "^1.8.20",
     "openai": "^5.7.0"

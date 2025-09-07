@@ -12,6 +12,7 @@ import { LLMError } from "../errors/LLMError";
 import { litellmModelManager } from "../utils/litellm-models";
 import { OAuthConfig } from "../core/oauth";
 import { OAuth } from "../auth/oauth";
+import { processImageUrl } from "../utils/image-processor";
 
 /**
  * Provider adapter for Anthropic's Claude API
@@ -22,41 +23,48 @@ export class AnthropicProvider implements ProviderAdapter {
 
   /** Anthropic SDK client instance */
   private client: Anthropic;
-  
+
   /** OAuth instance (if using OAuth) */
   private oauth?: OAuth;
 
   /** State for tracking partial tool calls during streaming */
-  private streamingToolCalls: Map<number, {
-    id: string;
-    name: string;
-    partialArguments: string;
-  }> = new Map();
+  private streamingToolCalls: Map<
+    number,
+    {
+      id: string;
+      name: string;
+      partialArguments: string;
+    }
+  > = new Map();
 
   /**
    * Create a new Anthropic provider instance
    * @param config - Configuration options for the Anthropic client
    */
-  constructor(config: {
-    /** API key for authentication */
-    apiKey: string;
-    /** Custom base URL (for proxies) */
-    baseURL?: string;
-  } | {
-    /** OAuth configuration */
-    oauth: OAuthConfig;
-    /** Custom base URL (for proxies) */
-    baseURL?: string;
-  }) {
+  constructor(
+    config:
+      | {
+          /** API key for authentication */
+          apiKey: string;
+          /** Custom base URL (for proxies) */
+          baseURL?: string;
+        }
+      | {
+          /** OAuth configuration */
+          oauth: OAuthConfig;
+          /** Custom base URL (for proxies) */
+          baseURL?: string;
+        },
+  ) {
     // Initialize client
     this.client = new Anthropic({
-      apiKey: 'apiKey' in config ? config.apiKey : 'placeholder', // OAuth will override this
+      apiKey: "apiKey" in config ? config.apiKey : "placeholder", // OAuth will override this
       baseURL: config.baseURL,
     });
-    
+
     // Set up OAuth if provided
-    if ('oauth' in config) {
-      this.oauth = new OAuth({ ...config.oauth, provider: 'anthropic' });
+    if ("oauth" in config) {
+      this.oauth = new OAuth({ ...config.oauth, provider: "anthropic" });
     }
   }
 
@@ -64,7 +72,7 @@ export class AnthropicProvider implements ProviderAdapter {
    * Generate a completion using Anthropic's messages API
    */
   async generateCompletion(
-    request: CompletionRequest
+    request: CompletionRequest,
   ): Promise<CompletionResponse> {
     try {
       const { system, messages } = this.extractSystemMessage(request.messages);
@@ -96,12 +104,12 @@ export class AnthropicProvider implements ProviderAdapter {
    * Generate a streaming completion using Anthropic's streaming API
    */
   async *streamCompletion(
-    request: CompletionRequest
+    request: CompletionRequest,
   ): AsyncIterable<CompletionChunk> {
     try {
       // Reset tool calls state for new stream
       this.streamingToolCalls.clear();
-      
+
       const { system, messages } = this.extractSystemMessage(request.messages);
       const client = await this.getClient();
 
@@ -132,10 +140,11 @@ export class AnthropicProvider implements ProviderAdapter {
       return await litellmModelManager.getModelsByProvider("anthropic");
     } catch (error) {
       throw new LLMError(
-        `Failed to fetch Anthropic models from LiteLLM: ${error instanceof Error ? error.message : "Unknown error"
+        `Failed to fetch Anthropic models from LiteLLM: ${
+          error instanceof Error ? error.message : "Unknown error"
         }`,
         error instanceof Error ? error : undefined,
-        { provider: "anthropic" }
+        { provider: "anthropic" },
       );
     }
   }
@@ -148,10 +157,11 @@ export class AnthropicProvider implements ProviderAdapter {
       return await litellmModelManager.getModelInfo(modelId, "anthropic");
     } catch (error) {
       throw new LLMError(
-        `Failed to get Anthropic model '${modelId}' from LiteLLM: ${error instanceof Error ? error.message : "Unknown error"
+        `Failed to get Anthropic model '${modelId}' from LiteLLM: ${
+          error instanceof Error ? error.message : "Unknown error"
         }`,
         error instanceof Error ? error : undefined,
-        { provider: "anthropic" }
+        { provider: "anthropic" },
       );
     }
   }
@@ -161,14 +171,14 @@ export class AnthropicProvider implements ProviderAdapter {
    */
   async initiateOAuth() {
     if (!this.oauth) {
-      throw new LLMError('OAuth not configured for this provider');
+      throw new LLMError("OAuth not configured for this provider");
     }
     return await this.oauth.initiateAuth();
   }
 
   async completeOAuth(code: string, codeVerifier?: string) {
     if (!this.oauth) {
-      throw new LLMError('OAuth not configured for this provider');
+      throw new LLMError("OAuth not configured for this provider");
     }
     await this.oauth.completeAuth(code, codeVerifier);
   }
@@ -178,7 +188,7 @@ export class AnthropicProvider implements ProviderAdapter {
    */
   async getOAuthUrl() {
     if (!this.oauth) {
-      throw new LLMError('OAuth not configured for this provider');
+      throw new LLMError("OAuth not configured for this provider");
     }
     return await this.oauth.initiateAuth();
   }
@@ -190,7 +200,6 @@ export class AnthropicProvider implements ProviderAdapter {
   async getOAuthUrlSecure() {
     return await this.getOAuthUrl();
   }
-
 
   /**
    * Get configured client with proper authentication
@@ -205,27 +214,31 @@ export class AnthropicProvider implements ProviderAdapter {
         defaultHeaders: {}, // Empty default headers
         fetch: async (input: any, init: any) => {
           const accessToken = await this.oauth!.getAccessToken();
-          
+
           // Start with fresh headers to avoid conflicts
           const cleanHeaders: Record<string, string> = {
             "content-type": "application/json",
-            "authorization": `Bearer ${accessToken}`,
+            authorization: `Bearer ${accessToken}`,
             "anthropic-beta": "oauth-2025-04-20",
             "anthropic-version": "2023-06-01",
             "user-agent": "ai-sdk/anthropic",
           };
-          
+
           // Add any other headers from init, but skip auth-related ones
           if (init.headers) {
             Object.entries(init.headers).forEach(([key, value]) => {
               const lowerKey = key.toLowerCase();
-              if (!lowerKey.includes('auth') && !lowerKey.includes('api-key') && 
-                  lowerKey !== 'x-api-key' && lowerKey !== 'authorization') {
+              if (
+                !lowerKey.includes("auth") &&
+                !lowerKey.includes("api-key") &&
+                lowerKey !== "x-api-key" &&
+                lowerKey !== "authorization"
+              ) {
                 cleanHeaders[key] = value as string;
               }
             });
           }
-          
+
           return fetch(input, {
             ...init,
             headers: cleanHeaders,
@@ -233,7 +246,7 @@ export class AnthropicProvider implements ProviderAdapter {
         },
       });
     }
-    
+
     // Use existing API key client
     return this.client;
   }
@@ -249,21 +262,23 @@ export class AnthropicProvider implements ProviderAdapter {
     const systemMessages = messages.filter((m) => m.role === "system");
     const nonSystemMessages = messages.filter((m) => m.role !== "system");
 
-    let systemText = systemMessages.length > 0
-      ? systemMessages.map((m) => m.content as string).join("\n")
-      : "";
+    let systemText =
+      systemMessages.length > 0
+        ? systemMessages.map((m) => m.content as string).join("\n")
+        : "";
 
     // Add Claude Code spoofing for OAuth authentication (following Fabric approach)
     if (this.oauth) {
-      const claudeCodeMessage = "You are Claude Code, Anthropic's official CLI for Claude.";
-      systemText = systemText 
+      const claudeCodeMessage =
+        "You are Claude Code, Anthropic's official CLI for Claude.";
+      systemText = systemText
         ? `${claudeCodeMessage}\n\n${systemText}`
         : claudeCodeMessage;
     }
 
-    return { 
-      system: systemText || undefined, 
-      messages: nonSystemMessages 
+    return {
+      system: systemText || undefined,
+      messages: nonSystemMessages,
     };
   }
 
@@ -289,23 +304,27 @@ export class AnthropicProvider implements ProviderAdapter {
       // Handle simple text messages
       if (typeof msg.content === "string") {
         // For assistant messages with tool calls, create content blocks
-        if (msg.role === "assistant" && msg.toolCalls && msg.toolCalls.length > 0) {
+        if (
+          msg.role === "assistant" &&
+          msg.toolCalls &&
+          msg.toolCalls.length > 0
+        ) {
           const content: Anthropic.ContentBlockParam[] = [
             { type: "text", text: msg.content },
-            ...msg.toolCalls.map(toolCall => ({
+            ...msg.toolCalls.map((toolCall) => ({
               type: "tool_use" as const,
               id: toolCall.id,
               name: toolCall.name,
               input: toolCall.arguments,
-            }))
+            })),
           ];
-          
+
           return {
             role: "assistant",
             content,
           };
         }
-        
+
         return {
           role: msg.role as "user" | "assistant",
           content: msg.content,
@@ -317,32 +336,34 @@ export class AnthropicProvider implements ProviderAdapter {
         switch (part.type) {
           case "text":
             return { type: "text", text: part.text! };
-          case "image":
-            return {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: (part.mimeType as any) || "image/jpeg",
-                data: part.imageUrl!.replace(/^data:image\/[^;]+;base64,/, ""),
-              },
-            };
-          case "image_url":
-            const imageUrl = (part as any).image_url.url;
-            return {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: "image/jpeg", // Default, could be improved to detect type from URL
-                data: imageUrl.replace(/^data:image\/[^;]+;base64,/, ""),
-              },
-            };
+          case "image_url": {
+            const processed = processImageUrl(part.imageUrl!);
+            if (processed.isBase64) {
+              return {
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: (part.mimeType as any) || processed.mimeType || "image/jpeg",
+                  data: processed.data,
+                },
+              };
+            } else {
+              return {
+                type: "image",
+                source: {
+                  type: "url",
+                  url: processed.data,
+                },
+              };
+            }
+          }
           case "document":
             throw new LLMError(
-              "Documents are not supported in this format for Anthropic"
+              "Documents are not supported in this format for Anthropic",
             );
           default:
             throw new LLMError(
-              `Anthropic does not support content type: ${part.type}`
+              `Anthropic does not support content type: ${part.type}`,
             );
         }
       });
@@ -389,7 +410,7 @@ export class AnthropicProvider implements ProviderAdapter {
 
     const toolCalls = response.content
       .filter(
-        (block): block is Anthropic.ToolUseBlock => block.type === "tool_use"
+        (block): block is Anthropic.ToolUseBlock => block.type === "tool_use",
       )
       .map((block) => ({
         id: block.id,
@@ -416,7 +437,7 @@ export class AnthropicProvider implements ProviderAdapter {
    */
   private convertChunk(chunk: any): CompletionChunk {
     // Handle different chunk types from Anthropic streaming
-    
+
     // Handle text content deltas
     if (chunk.type === "content_block_delta" && chunk.delta?.text) {
       return {
@@ -427,14 +448,17 @@ export class AnthropicProvider implements ProviderAdapter {
     }
 
     // Handle tool use content block start
-    if (chunk.type === "content_block_start" && chunk.content_block?.type === "tool_use") {
+    if (
+      chunk.type === "content_block_start" &&
+      chunk.content_block?.type === "tool_use"
+    ) {
       const toolBlock = chunk.content_block;
       this.streamingToolCalls.set(chunk.index, {
         id: toolBlock.id,
         name: toolBlock.name,
         partialArguments: "",
       });
-      
+
       return {
         id: "streaming",
         delta: "",
@@ -443,12 +467,15 @@ export class AnthropicProvider implements ProviderAdapter {
     }
 
     // Handle tool use argument deltas
-    if (chunk.type === "content_block_delta" && chunk.delta?.type === "input_json_delta") {
+    if (
+      chunk.type === "content_block_delta" &&
+      chunk.delta?.type === "input_json_delta"
+    ) {
       const toolCall = this.streamingToolCalls.get(chunk.index);
       if (toolCall) {
         toolCall.partialArguments += chunk.delta.partial_json;
       }
-      
+
       return {
         id: "streaming",
         delta: "",
@@ -457,28 +484,34 @@ export class AnthropicProvider implements ProviderAdapter {
     }
 
     // Handle tool use content block stop
-    if (chunk.type === "content_block_stop" && this.streamingToolCalls.has(chunk.index)) {
+    if (
+      chunk.type === "content_block_stop" &&
+      this.streamingToolCalls.has(chunk.index)
+    ) {
       const toolCall = this.streamingToolCalls.get(chunk.index)!;
-      
+
       // Try to parse the accumulated arguments
       let parsedArguments: Record<string, unknown> = {};
       try {
         parsedArguments = JSON.parse(toolCall.partialArguments);
       } catch (error) {
         // If parsing fails, keep as empty object
-        console.warn("Failed to parse tool arguments:", toolCall.partialArguments);
+        console.warn(
+          "Failed to parse tool arguments:",
+          toolCall.partialArguments,
+        );
       }
-      
+
       // Create the complete tool call
       const completedToolCall = {
         id: toolCall.id,
         name: toolCall.name,
         arguments: parsedArguments,
       };
-      
+
       // Clean up the partial tool call
       this.streamingToolCalls.delete(chunk.index);
-      
+
       return {
         id: "streaming",
         delta: "",
@@ -495,10 +528,10 @@ export class AnthropicProvider implements ProviderAdapter {
         finished: true,
         usage: chunk.usage
           ? {
-            promptTokens: chunk.usage.input_tokens,
-            completionTokens: chunk.usage.output_tokens,
-            totalTokens: chunk.usage.input_tokens + chunk.usage.output_tokens,
-          }
+              promptTokens: chunk.usage.input_tokens,
+              completionTokens: chunk.usage.output_tokens,
+              totalTokens: chunk.usage.input_tokens + chunk.usage.output_tokens,
+            }
           : undefined,
       };
     }
@@ -515,7 +548,7 @@ export class AnthropicProvider implements ProviderAdapter {
    * Convert Anthropic finish reason to unified format
    */
   private convertFinishReason(
-    reason: string | null
+    reason: string | null,
   ): CompletionResponse["finishReason"] {
     switch (reason) {
       case "end_turn":
@@ -543,17 +576,17 @@ export class AnthropicProvider implements ProviderAdapter {
           provider: "anthropic",
           statusCode: error.status,
           type: error.name,
-        }
+        },
       );
     }
 
     if (error instanceof Error) {
       throw new LLMError(
         `Anthropic ${operation} failed: ${error.message}`,
-        error
+        error,
       );
     }
 
     throw new LLMError(`Anthropic ${operation} failed with unknown error`);
   }
-} 
+}

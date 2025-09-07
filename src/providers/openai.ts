@@ -19,6 +19,7 @@ import type {
 } from "../core/interfaces";
 import { LLMError } from "../errors/LLMError";
 import { litellmModelManager } from "../utils/litellm-models";
+import { processImageUrl } from "../utils/image-processor";
 
 /**
  * Provider adapter for OpenAI's API
@@ -55,18 +56,18 @@ export class OpenAIProvider implements ProviderAdapter {
    * Generate a completion using OpenAI's chat completions API
    */
   async generateCompletion(
-    request: CompletionRequest
+    request: CompletionRequest,
   ): Promise<CompletionResponse> {
     try {
       const openAIRequest: OpenAI.Chat.ChatCompletionCreateParamsNonStreaming =
-      {
-        model: request.model,
-        messages: this.convertMessages(request.messages),
-        temperature: request.temperature,
-        max_tokens: request.maxTokens,
-        stream: false,
-        stop: request.stop,
-      };
+        {
+          model: request.model,
+          messages: this.convertMessages(request.messages),
+          temperature: request.temperature,
+          max_completion_tokens: request.maxTokens,
+          stream: false,
+          stop: request.stop,
+        };
 
       if (request.tools) {
         openAIRequest.tools = this.convertTools(request.tools);
@@ -75,7 +76,7 @@ export class OpenAIProvider implements ProviderAdapter {
 
       if (request.responseFormat) {
         openAIRequest.response_format = this.convertResponseFormat(
-          request.responseFormat
+          request.responseFormat,
         );
       }
 
@@ -91,7 +92,7 @@ export class OpenAIProvider implements ProviderAdapter {
    * Generate a streaming completion using OpenAI's streaming API
    */
   async *streamCompletion(
-    request: CompletionRequest
+    request: CompletionRequest,
   ): AsyncIterable<CompletionChunk> {
     try {
       const stream = await this.client.chat.completions.create({
@@ -115,10 +116,11 @@ export class OpenAIProvider implements ProviderAdapter {
       return await litellmModelManager.getModelsByProvider("openai");
     } catch (error) {
       throw new LLMError(
-        `Failed to fetch OpenAI models from LiteLLM: ${error instanceof Error ? error.message : "Unknown error"
+        `Failed to fetch OpenAI models from LiteLLM: ${
+          error instanceof Error ? error.message : "Unknown error"
         }`,
         error instanceof Error ? error : undefined,
-        { provider: "openai" }
+        { provider: "openai" },
       );
     }
   }
@@ -131,10 +133,11 @@ export class OpenAIProvider implements ProviderAdapter {
       return await litellmModelManager.getModelInfo(modelId, "openai");
     } catch (error) {
       throw new LLMError(
-        `Failed to get OpenAI model '${modelId}' from LiteLLM: ${error instanceof Error ? error.message : "Unknown error"
+        `Failed to get OpenAI model '${modelId}' from LiteLLM: ${
+          error instanceof Error ? error.message : "Unknown error"
         }`,
         error instanceof Error ? error : undefined,
-        { provider: "openai" }
+        { provider: "openai" },
       );
     }
   }
@@ -188,7 +191,7 @@ export class OpenAIProvider implements ProviderAdapter {
    * Generate embeddings using OpenAI's embedding models
    */
   async generateEmbedding(
-    request: EmbeddingRequest
+    request: EmbeddingRequest,
   ): Promise<EmbeddingResponse> {
     try {
       const response = await this.client.embeddings.create({
@@ -215,7 +218,7 @@ export class OpenAIProvider implements ProviderAdapter {
    * Handles multimodal content and tool messages
    */
   private convertMessages(
-    messages: Message[]
+    messages: Message[],
   ): OpenAI.Chat.ChatCompletionMessageParam[] {
     return messages.map((msg): OpenAI.Chat.ChatCompletionMessageParam => {
       // Handle tool response messages
@@ -230,11 +233,15 @@ export class OpenAIProvider implements ProviderAdapter {
       // Handle simple text messages
       if (typeof msg.content === "string") {
         // For assistant messages with tool calls, include tool_calls
-        if (msg.role === "assistant" && msg.toolCalls && msg.toolCalls.length > 0) {
+        if (
+          msg.role === "assistant" &&
+          msg.toolCalls &&
+          msg.toolCalls.length > 0
+        ) {
           return {
             role: "assistant",
             content: msg.content,
-            tool_calls: msg.toolCalls.map(toolCall => ({
+            tool_calls: msg.toolCalls.map((toolCall) => ({
               id: toolCall.id,
               type: "function" as const,
               function: {
@@ -244,7 +251,7 @@ export class OpenAIProvider implements ProviderAdapter {
             })),
           };
         }
-        
+
         return {
           role: msg.role as "system" | "user" | "assistant",
           content: msg.content,
@@ -265,17 +272,20 @@ export class OpenAIProvider implements ProviderAdapter {
           switch (part.type) {
             case "text":
               return { type: "text", text: part.text! };
-            case "image":
-              return {
-                type: "image_url",
-                image_url: { url: part.imageUrl! },
-              };
-            case "image_url":
-              // Pass through OpenAI-compatible format directly
-              return {
-                type: "image_url",
-                image_url: (part as any).image_url,
-              };
+            case "image_url": {
+              const processed = processImageUrl(part.imageUrl!);
+              if (processed.isBase64 && processed.mimeType) {
+                return {
+                  type: "image_url",
+                  image_url: { url: `data:${processed.mimeType};base64,${processed.data}` },
+                };
+              } else {
+                return {
+                  type: "image_url",
+                  image_url: { url: processed.data },
+                };
+              }
+            }
             case "audio":
               const audioFormat = this.extractAudioFormat(part.mimeType);
               return {
@@ -287,10 +297,10 @@ export class OpenAIProvider implements ProviderAdapter {
               };
             default:
               throw new LLMError(
-                `OpenAI does not support content type: ${part.type}`
+                `OpenAI does not support content type: ${part.type}`,
               );
           }
-        }
+        },
       );
 
       return {
@@ -309,7 +319,7 @@ export class OpenAIProvider implements ProviderAdapter {
     const format = mimeType.toLowerCase();
     if (format.includes("wav")) return "wav";
     if (format.includes("mp3")) return "mp3";
-    
+
     // Default to wav for unknown formats
     return "wav";
   }
@@ -318,7 +328,7 @@ export class OpenAIProvider implements ProviderAdapter {
    * Convert unified tool definitions to OpenAI format
    */
   private convertTools(
-    tools: ToolDefinition[]
+    tools: ToolDefinition[],
   ): OpenAI.Chat.ChatCompletionTool[] {
     return tools.map((tool) => ({
       type: "function",
@@ -366,7 +376,7 @@ export class OpenAIProvider implements ProviderAdapter {
    * Convert OpenAI response to unified format
    */
   private convertResponse(
-    response: OpenAI.Chat.ChatCompletion
+    response: OpenAI.Chat.ChatCompletion,
   ): CompletionResponse {
     const choice = response.choices[0];
     const message = choice.message;
@@ -393,11 +403,10 @@ export class OpenAIProvider implements ProviderAdapter {
    * Convert OpenAI streaming chunk to unified format
    */
   private convertChunk(
-    chunk: OpenAI.Chat.Completions.ChatCompletionChunk
+    chunk: OpenAI.Chat.Completions.ChatCompletionChunk,
   ): CompletionChunk {
     const choice = chunk.choices[0];
     const delta = choice?.delta;
-    
 
     // Convert OpenAI tool call deltas to our format
     const toolCallDeltas = delta?.tool_calls?.map((toolCall) => ({
@@ -413,12 +422,15 @@ export class OpenAIProvider implements ProviderAdapter {
       finished: choice?.finish_reason !== null,
       usage: chunk.usage
         ? {
-          promptTokens: chunk.usage.prompt_tokens || 0,
-          completionTokens: chunk.usage.completion_tokens || 0,
-          totalTokens: chunk.usage.total_tokens || 0,
-        }
+            promptTokens: chunk.usage.prompt_tokens || 0,
+            completionTokens: chunk.usage.completion_tokens || 0,
+            totalTokens: chunk.usage.total_tokens || 0,
+          }
         : undefined,
-      toolCallDeltas: toolCallDeltas && toolCallDeltas.length > 0 ? toolCallDeltas : undefined,
+      toolCallDeltas:
+        toolCallDeltas && toolCallDeltas.length > 0
+          ? toolCallDeltas
+          : undefined,
     };
   }
 
@@ -426,7 +438,7 @@ export class OpenAIProvider implements ProviderAdapter {
    * Convert OpenAI finish reason to unified format
    */
   private convertFinishReason(
-    reason: string | null
+    reason: string | null,
   ): CompletionResponse["finishReason"] {
     switch (reason) {
       case "stop":
@@ -458,7 +470,7 @@ export class OpenAIProvider implements ProviderAdapter {
           provider: "openai",
           statusCode: error.status,
           type: error.name,
-        }
+        },
       );
     }
 
@@ -473,7 +485,7 @@ export class OpenAIProvider implements ProviderAdapter {
    * Prepare request for streaming (helper method)
    */
   private prepareRequest(
-    request: CompletionRequest
+    request: CompletionRequest,
   ): Omit<OpenAI.Chat.ChatCompletionCreateParams, "stream"> {
     const openAIRequest: Omit<
       OpenAI.Chat.ChatCompletionCreateParams,
@@ -482,7 +494,7 @@ export class OpenAIProvider implements ProviderAdapter {
       model: request.model,
       messages: this.convertMessages(request.messages),
       temperature: request.temperature,
-      max_tokens: request.maxTokens,
+      max_completion_tokens: request.maxTokens,
       stop: request.stop,
     };
 

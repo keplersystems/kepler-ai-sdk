@@ -19,6 +19,7 @@ import type {
 } from "../core/interfaces";
 import { LLMError } from "../errors/LLMError";
 import { litellmModelManager } from "../utils/litellm-models";
+import { processFileDataForBase64 } from "../utils/image-processor";
 
 /**
  * WAV conversion options interface
@@ -425,118 +426,113 @@ export class GeminiProvider implements ProviderAdapter {
         ? systemMessages.map((m) => m.content as string).join("\n")
         : undefined;
 
-    const contents = await Promise.all(nonSystemMessages.map(async (msg) => {
-      // Handle tool result messages
-      if (msg.role === "tool") {
-        return {
-          role: "function",
-          parts: [
-            {
-              functionResponse: {
-                name: "tool_result", // We'll need to track tool names
-                response: { result: msg.content },
-              },
-            },
-          ],
-        };
-      }
-
-      // Handle simple text messages
-      if (typeof msg.content === "string") {
-        // For assistant messages with tool calls, include function calls
-        if (
-          msg.role === "assistant" &&
-          msg.toolCalls &&
-          msg.toolCalls.length > 0
-        ) {
-          const parts: any[] = [];
-
-          // Add text content if present
-          if (msg.content) {
-            parts.push({ text: msg.content });
-          }
-
-          // Add function calls
-          msg.toolCalls.forEach((toolCall) => {
-            parts.push({
-              functionCall: {
-                name: toolCall.name,
-                args: toolCall.arguments,
-              },
-            });
-          });
-
+    const contents = await Promise.all(
+      nonSystemMessages.map(async (msg) => {
+        // Handle tool result messages
+        if (msg.role === "tool") {
           return {
-            role: "model",
-            parts,
+            role: "function",
+            parts: [
+              {
+                functionResponse: {
+                  name: "tool_result", // We'll need to track tool names
+                  response: { result: msg.content },
+                },
+              },
+            ],
           };
         }
 
+        // Handle simple text messages
+        if (typeof msg.content === "string") {
+          // For assistant messages with tool calls, include function calls
+          if (
+            msg.role === "assistant" &&
+            msg.toolCalls &&
+            msg.toolCalls.length > 0
+          ) {
+            const parts: any[] = [];
+
+            // Add text content if present
+            if (msg.content) {
+              parts.push({ text: msg.content });
+            }
+
+            // Add function calls
+            msg.toolCalls.forEach((toolCall) => {
+              parts.push({
+                functionCall: {
+                  name: toolCall.name,
+                  args: toolCall.arguments,
+                },
+              });
+            });
+
+            return {
+              role: "model",
+              parts,
+            };
+          }
+
+          return {
+            role: msg.role === "assistant" ? "model" : "user",
+            parts: [{ text: msg.content }],
+          };
+        }
+
+        // Handle multimodal content with comprehensive MIME type support
+        const parts = await Promise.all(
+          msg.content.map(async (part) => {
+            switch (part.type) {
+              case "text":
+                return { text: part.text! };
+              case "image_url":
+                return {
+                  inlineData: {
+                    mimeType:
+                      this.validateImageMimeType(part.mimeType) || "image/jpeg",
+                    data: await processFileDataForBase64(part.imageUrl!),
+                  },
+                };
+              case "video":
+                return {
+                  inlineData: {
+                    mimeType:
+                      this.validateVideoMimeType(part.mimeType) || "video/mp4",
+                    data: await processFileDataForBase64(part.videoUrl!),
+                  },
+                };
+              case "audio":
+                return {
+                  inlineData: {
+                    mimeType:
+                      this.validateAudioMimeType(part.mimeType) || "audio/mpeg",
+                    data: await processFileDataForBase64(part.audioUrl!),
+                  },
+                };
+              case "document":
+                return {
+                  inlineData: {
+                    mimeType:
+                      this.validateDocumentMimeType(part.mimeType) ||
+                      "application/pdf",
+                    data: await processFileDataForBase64(part.documentUrl!),
+                  },
+                };
+              default:
+                throw new LLMError(
+                  `Gemini does not support content type: ${part.type}`,
+                );
+            }
+          }),
+        );
+
         return {
           role: msg.role === "assistant" ? "model" : "user",
-          parts: [{ text: msg.content }],
+          parts,
         };
-      }
-
-      // Handle multimodal content with comprehensive MIME type support
-      const parts = await Promise.all(msg.content.map(async (part) => {
-        switch (part.type) {
-          case "text":
-            return { text: part.text! };
-          case "image":
-            return {
-              inlineData: {
-                mimeType:
-                  this.validateImageMimeType(part.mimeType) || "image/jpeg",
-                data: await this.processFileData(part.imageUrl!),
-              },
-            };
-          case "image_url":
-            // Convert OpenAI-compatible format to Gemini format
-            const imageUrl = (part as any).image_url.url;
-            return {
-              inlineData: {
-                mimeType: "image/jpeg", // Default, could be improved to detect from URL
-                data: await this.processFileData(imageUrl),
-              },
-            };
-          case "video":
-            return {
-              inlineData: {
-                mimeType:
-                  this.validateVideoMimeType(part.mimeType) || "video/mp4",
-                data: await this.processFileData(part.videoUrl!),
-              },
-            };
-          case "audio":
-            return {
-              inlineData: {
-                mimeType:
-                  this.validateAudioMimeType(part.mimeType) || "audio/mpeg",
-                data: await this.processFileData(part.audioUrl!),
-              },
-            };
-          case "document":
-            return {
-              inlineData: {
-                mimeType:
-                  this.validateDocumentMimeType(part.mimeType) ||
-                  "application/pdf",
-                data: await this.processFileData(part.documentUrl!),
-              },
-            };
-          default:
-            throw new LLMError(
-              `Gemini does not support content type: ${part.type}`,
-            );
-        }
-      }));
-
-      return {
-        role: msg.role === "assistant" ? "model" : "user",
-        parts,
-      };
-    }));
+      }),
+    );
 
     return { contents, systemInstruction };
   }
@@ -731,7 +727,6 @@ export class GeminiProvider implements ProviderAdapter {
     return `${ratioWidth}:${ratioHeight}`;
   }
 
-
   /**
    * Convert raw audio data to WAV format
    * Based on the official Google sample code
@@ -916,43 +911,4 @@ export class GeminiProvider implements ProviderAdapter {
     throw new LLMError(`Gemini ${operation} failed with unknown error`);
   }
 
-  /**
-   * Process file data - convert URL to base64 or extract base64 from data URI
-   */
-  private async processFileData(fileData: string): Promise<string> {
-    // If it's already base64 data (with or without data URI prefix), extract and return it
-    if (fileData.startsWith('data:')) {
-      // Extract base64 data from data URI (e.g., "data:image/jpeg;base64,/9j/4AAQ...")
-      return fileData.split(',')[1];
-    }
-    
-    // If it looks like base64 data without prefix, return as-is
-    if (!fileData.startsWith('http')) {
-      return fileData;
-    }
-
-    // If it's an HTTP URL, fetch and convert to base64
-    try {
-      const response = await fetch(fileData);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`);
-      }
-      
-      const buffer = await response.arrayBuffer();
-      const bytes = new Uint8Array(buffer);
-      
-      // Convert to base64
-      let binary = '';
-      for (let i = 0; i < bytes.length; i++) {
-        binary += String.fromCharCode(bytes[i]);
-      }
-      
-      return btoa(binary);
-    } catch (error) {
-      throw new LLMError(
-        `Failed to process file data: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        error instanceof Error ? error : undefined
-      );
-    }
-  }
 }

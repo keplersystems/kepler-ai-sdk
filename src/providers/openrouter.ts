@@ -15,6 +15,7 @@ import type {
 } from "../core/interfaces";
 import { LLMError } from "../errors/LLMError";
 import { litellmModelManager } from "../utils/litellm-models";
+import { processImageUrl } from "../utils/image-processor";
 
 /**
  * Provider adapter for OpenRouter's unified LLM API
@@ -72,18 +73,18 @@ export class OpenRouterProvider implements ProviderAdapter {
    * Generate a completion using OpenRouter's chat completions API
    */
   async generateCompletion(
-    request: CompletionRequest
+    request: CompletionRequest,
   ): Promise<CompletionResponse> {
     try {
       const openAIRequest: OpenAI.Chat.ChatCompletionCreateParamsNonStreaming =
-      {
-        model: request.model,
-        messages: this.convertMessages(request.messages),
-        temperature: request.temperature,
-        max_tokens: request.maxTokens,
-        stream: false,
-        stop: request.stop,
-      };
+        {
+          model: request.model,
+          messages: this.convertMessages(request.messages),
+          temperature: request.temperature,
+          max_tokens: request.maxTokens,
+          stream: false,
+          stop: request.stop,
+        };
 
       if (request.tools) {
         openAIRequest.tools = this.convertTools(request.tools);
@@ -92,7 +93,7 @@ export class OpenRouterProvider implements ProviderAdapter {
 
       if (request.responseFormat) {
         openAIRequest.response_format = this.convertResponseFormat(
-          request.responseFormat
+          request.responseFormat,
         );
       }
 
@@ -108,7 +109,7 @@ export class OpenRouterProvider implements ProviderAdapter {
    * Generate a streaming completion using OpenRouter's streaming API
    */
   async *streamCompletion(
-    request: CompletionRequest
+    request: CompletionRequest,
   ): AsyncIterable<CompletionChunk> {
     try {
       const openAIRequest: OpenAI.Chat.ChatCompletionCreateParamsStreaming = {
@@ -159,7 +160,7 @@ export class OpenRouterProvider implements ProviderAdapter {
 
       if (!response.ok) {
         throw new Error(
-          `OpenRouter models API failed: ${response.status} ${response.statusText}`
+          `OpenRouter models API failed: ${response.status} ${response.statusText}`,
         );
       }
 
@@ -197,7 +198,7 @@ export class OpenRouterProvider implements ProviderAdapter {
       throw new LLMError(
         `Failed to fetch OpenRouter models: OpenRouter API and LiteLLM both unavailable`,
         error instanceof Error ? error : undefined,
-        { provider: "openrouter" }
+        { provider: "openrouter" },
       );
     }
   }
@@ -239,7 +240,7 @@ export class OpenRouterProvider implements ProviderAdapter {
    * Convert unified messages to OpenAI format (OpenRouter uses OpenAI-compatible API)
    */
   private convertMessages(
-    messages: Message[]
+    messages: Message[],
   ): OpenAI.Chat.ChatCompletionMessageParam[] {
     return messages.map((msg): OpenAI.Chat.ChatCompletionMessageParam => {
       // Handle tool response messages
@@ -254,11 +255,15 @@ export class OpenRouterProvider implements ProviderAdapter {
       // Handle simple text messages
       if (typeof msg.content === "string") {
         // For assistant messages with tool calls, include tool_calls
-        if (msg.role === "assistant" && msg.toolCalls && msg.toolCalls.length > 0) {
+        if (
+          msg.role === "assistant" &&
+          msg.toolCalls &&
+          msg.toolCalls.length > 0
+        ) {
           return {
             role: "assistant",
             content: msg.content,
-            tool_calls: msg.toolCalls.map(toolCall => ({
+            tool_calls: msg.toolCalls.map((toolCall) => ({
               id: toolCall.id,
               type: "function" as const,
               function: {
@@ -268,7 +273,7 @@ export class OpenRouterProvider implements ProviderAdapter {
             })),
           };
         }
-        
+
         return {
           role: msg.role as "system" | "user" | "assistant",
           content: msg.content,
@@ -289,23 +294,26 @@ export class OpenRouterProvider implements ProviderAdapter {
           switch (part.type) {
             case "text":
               return { type: "text", text: part.text! };
-            case "image":
-              return {
-                type: "image_url",
-                image_url: { url: part.imageUrl! },
-              };
-            case "image_url":
-              // Pass through OpenAI-compatible format directly
-              return {
-                type: "image_url",
-                image_url: (part as any).image_url,
-              };
+            case "image_url": {
+              const processed = processImageUrl(part.imageUrl!);
+              if (processed.isBase64 && processed.mimeType) {
+                return {
+                  type: "image_url",
+                  image_url: { url: `data:${processed.mimeType};base64,${processed.data}` },
+                };
+              } else {
+                return {
+                  type: "image_url",
+                  image_url: { url: processed.data },
+                };
+              }
+            }
             default:
               throw new LLMError(
-                `OpenRouter does not support content type: ${part.type}`
+                `OpenRouter does not support content type: ${part.type}`,
               );
           }
-        }
+        },
       );
 
       return {
@@ -319,7 +327,7 @@ export class OpenRouterProvider implements ProviderAdapter {
    * Convert unified tool definitions to OpenAI format
    */
   private convertTools(
-    tools: ToolDefinition[]
+    tools: ToolDefinition[],
   ): OpenAI.Chat.ChatCompletionTool[] {
     return tools.map((tool) => ({
       type: "function",
@@ -368,7 +376,7 @@ export class OpenRouterProvider implements ProviderAdapter {
    */
   private convertResponse(
     response: OpenAI.Chat.ChatCompletion,
-    requestModel: string
+    requestModel: string,
   ): CompletionResponse {
     const choice = response.choices[0];
     const message = choice.message;
@@ -403,7 +411,7 @@ export class OpenRouterProvider implements ProviderAdapter {
    * Convert streaming chunk to unified format
    */
   private convertChunk(
-    chunk: OpenAI.Chat.Completions.ChatCompletionChunk
+    chunk: OpenAI.Chat.Completions.ChatCompletionChunk,
   ): CompletionChunk {
     const choice = chunk.choices[0];
     const delta = choice?.delta;
@@ -422,10 +430,10 @@ export class OpenRouterProvider implements ProviderAdapter {
       finished: choice?.finish_reason !== null,
       usage: chunk.usage
         ? {
-          promptTokens: chunk.usage.prompt_tokens || 0,
-          completionTokens: chunk.usage.completion_tokens || 0,
-          totalTokens: chunk.usage.total_tokens || 0,
-        }
+            promptTokens: chunk.usage.prompt_tokens || 0,
+            completionTokens: chunk.usage.completion_tokens || 0,
+            totalTokens: chunk.usage.total_tokens || 0,
+          }
         : undefined,
       toolCallDeltas: toolCallDeltas,
     };
@@ -435,7 +443,7 @@ export class OpenRouterProvider implements ProviderAdapter {
    * Convert finish reason to unified format
    */
   private convertFinishReason(
-    reason: string | null
+    reason: string | null,
   ): CompletionResponse["finishReason"] {
     switch (reason) {
       case "stop":
@@ -661,14 +669,14 @@ export class OpenRouterProvider implements ProviderAdapter {
           provider: "openrouter",
           statusCode: error.status,
           type: error.name,
-        }
+        },
       );
     }
 
     if (error instanceof Error) {
       throw new LLMError(
         `OpenRouter ${operation} failed: ${error.message}`,
-        error
+        error,
       );
     }
 
